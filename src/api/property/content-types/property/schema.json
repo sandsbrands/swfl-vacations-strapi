@@ -1,0 +1,91 @@
+{
+  "kind": "collectionType",
+  "collectionName": "properties",
+  "info": {
+    "singularName": "property",
+    "pluralName": "properties",
+    "displayName": "property"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "property_type": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "zip": {
+      "type": "string"
+    },
+    "ownerrez_property_id": {
+      "type": "string"
+    },
+    "ical_feed_url": {
+      "type": "string"
+    },
+    "qbo_project_id": {
+      "type": "string"
+    },
+    "lockbox_code": {
+      "type": "string"
+    },
+    "checkin_instructions": {
+      "type": "string"
+    },
+    "stripe_product_id": {
+      "type": "string"
+    },
+    "management_tier": {
+      "type": "string"
+    },
+    "bathrooms": {
+      "type": "integer"
+    },
+    "max_occupancy": {
+      "type": "integer"
+    },
+    "min_stay": {
+      "type": "integer"
+    },
+    "max_stay": {
+      "type": "integer"
+    },
+    "bedrooms": {
+      "type": "integer"
+    },
+    "is_active": {
+      "type": "boolean"
+    },
+    "featured_image": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "vendors",
+  "info": {
+    "singularName": "vendor",
+    "pluralName": "vendors",
+    "displayName": "Vendor"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "contact_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "stripe_connect_account_id": {
+      "type": "string"
+    },
+    "website": {
+      "type": "string"
+    },
+    "payout_percentage": {
+      "type": "integer"
+    },
+    "is_active": {
+      "type": "boolean"
+    }
+  }
+}

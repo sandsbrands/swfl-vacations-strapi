@@ -1,0 +1,31 @@
+{
+  "kind": "collectionType",
+  "collectionName": "property_images",
+  "info": {
+    "singularName": "property-image",
+    "pluralName": "property-images",
+    "displayName": "Property_Image"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "image": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ]
+    },
+    "caption": {
+      "type": "string"
+    },
+    "alt_text": {
+      "type": "string"
+    }
+  }
+}

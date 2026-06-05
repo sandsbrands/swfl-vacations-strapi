@@ -1,0 +1,51 @@
+{
+  "kind": "collectionType",
+  "collectionName": "experience_bookings",
+  "info": {
+    "singularName": "experience-booking",
+    "pluralName": "experience-bookings",
+    "displayName": "Experience_Booking"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "booking_id": {
+      "type": "string"
+    },
+    "guest_first_name": {
+      "type": "string"
+    },
+    "guest_last_name": {
+      "type": "string"
+    },
+    "guest_email": {
+      "type": "string"
+    },
+    "guest_phone": {
+      "type": "string"
+    },
+    "experience_name": {
+      "type": "string"
+    },
+    "stripe_payment_intent_id": {
+      "type": "string"
+    },
+    "payout_status": {
+      "type": "string"
+    },
+    "number_of_guests": {
+      "type": "integer"
+    },
+    "payout_schedule_date": {
+      "type": "date"
+    },
+    "total_amount": {
+      "type": "integer"
+    },
+    "vendor_payout_amount": {
+      "type": "integer"
+    }
+  }
+}
