@@ -26,6 +26,12 @@
     },
     "alt_text": {
       "type": "string"
+    },
+    "property": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::property.property",
+      "inversedBy": "images"
     }
   }
 }

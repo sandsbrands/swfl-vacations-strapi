@@ -86,6 +86,12 @@
         "videos",
         "audios"
       ]
+    },
+    "images": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::property-image.property-image",
+      "mappedBy": "property"
     }
   }
 }
