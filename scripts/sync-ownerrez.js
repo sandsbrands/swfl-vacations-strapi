@@ -8,6 +8,8 @@
 //   node scripts/sync-ownerrez.js --fixture=path/to.json sync from a local fixture instead of the live API
 //   node scripts/sync-ownerrez.js --dry-run              log what would happen, write nothing
 //   node scripts/sync-ownerrez.js --with-photos           also download + upload OwnerRez photos (slow, opt-in)
+//   node scripts/sync-ownerrez.js --remote                write to STRAPI_URL via its REST API + STRAPI_API_TOKEN
+//                                                          instead of the local database (default: local)
 //
 // What gets synced (see MEMORY notes from the OwnerRez review): amenities,
 // long-form descriptions, guest info, location, reviews, and the booking
@@ -27,14 +29,16 @@ const { compileStrapi, createStrapi } = require('@strapi/strapi');
 const ownerRez = require('./lib/ownerrez-client');
 const { processCategories } = require('./lib/amenity-categories');
 const { syncPhotos } = require('./lib/photo-sync');
+const { createRemoteApp } = require('./lib/strapi-remote-client');
 
 function parseArgs(argv) {
-  const args = { propertyIds: [], dryRun: false, withPhotos: false };
+  const args = { propertyIds: [], dryRun: false, withPhotos: false, remote: false };
   for (const raw of argv) {
     if (raw.startsWith('--fixture=')) args.fixture = raw.slice('--fixture='.length);
     else if (raw.startsWith('--property-id=')) args.propertyIds.push(raw.slice('--property-id='.length));
     else if (raw === '--dry-run') args.dryRun = true;
     else if (raw === '--with-photos') args.withPhotos = true;
+    else if (raw === '--remote') args.remote = true;
   }
   return args;
 }
@@ -51,7 +55,8 @@ function stripUndefined(obj) {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined && v !== null));
 }
 
-async function bootStrapi() {
+async function bootApp(remote) {
+  if (remote) return createRemoteApp();
   const appContext = await compileStrapi();
   const app = await createStrapi(appContext).load();
   app.log.level = 'error';
@@ -279,7 +284,7 @@ async function main() {
     return;
   }
 
-  const app = await bootStrapi();
+  const app = await bootApp(args.remote);
   const failures = [];
   try {
     for (const bundle of bundles) {

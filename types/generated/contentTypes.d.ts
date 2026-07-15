@@ -762,7 +762,7 @@ export interface ApiPropertyProperty extends Struct.CollectionTypeSchema {
     slug: Schema.Attribute.String;
     state: Schema.Attribute.String;
     stripe_product_id: Schema.Attribute.String;
-    summary: Schema.Attribute.String;
+    summary: Schema.Attribute.Text;
     unique_benefits: Schema.Attribute.Text;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &

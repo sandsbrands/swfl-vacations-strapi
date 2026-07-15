@@ -18,7 +18,7 @@
       "type": "string"
     },
     "summary": {
-      "type": "string"
+      "type": "text"
     },
     "description": {
       "type": "text"
