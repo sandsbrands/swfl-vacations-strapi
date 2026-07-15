@@ -15,12 +15,16 @@ const PLURAL_ROUTES = {
   'api::property-image.property-image': 'property-images',
 };
 
-// property and property-image have draftAndPublish enabled and this sync
-// intentionally keeps everything in draft. The REST API defaults to the
-// *published* version for both reads and writes when no status is given -
-// unlike the local Document Service, which defaults to draft - so without
-// this, findFirst would never see our own drafts (creating duplicates on
-// every re-run) and create would auto-publish instead of staying draft.
+// Both property and property-image have draftAndPublish enabled. The REST
+// API defaults to the *published* version for both reads and writes when no
+// status is given - unlike the local Document Service, which defaults to
+// draft - so without this, findFirst would never see our own drafts
+// (creating duplicates on every re-run) and create would auto-publish
+// instead of staying draft. A document's draft version exists regardless of
+// whether it's ever been published, so querying status=draft is the
+// reliable way to find an entry either way. photo-sync.js explicitly
+// publishes each property-image right after finding/creating it, since
+// unlike property it has no independent editorial review step.
 const DRAFT_UIDS = new Set(['api::property.property', 'api::property-image.property-image']);
 
 function requireEnv(name) {
@@ -99,6 +103,13 @@ function documents(uid) {
       const json = await request('PUT', `${collectionPath}/${documentId}`, {
         query: draft ? { status: 'draft' } : undefined,
         body: { data },
+      });
+      return json.data;
+    },
+    async publish({ documentId }) {
+      const json = await request('PUT', `${collectionPath}/${documentId}`, {
+        query: { status: 'published' },
+        body: { data: {} },
       });
       return json.data;
     },

@@ -42,6 +42,18 @@ async function downloadToTempFile(url, { attempts = 4 } = {}) {
   throw new Error(`Failed to download photo ${url} after ${attempts} attempts: ${lastError.message}`);
 }
 
+// property-image has draftAndPublish enabled but no independent editorial
+// workflow - it should always be visible once its parent property is
+// published, regardless of the property's own draft/publish state. Since
+// there's no way to disable draftAndPublish without risking a destructive
+// migration (confirmed locally: toggling it wiped the whole table), we
+// instead just publish every property-image immediately, and backfill any
+// pre-existing ones this sync finds still unpublished.
+async function ensurePublished(app, doc) {
+  if (doc.publishedAt) return;
+  await app.documents('api::property-image.property-image').publish({ documentId: doc.documentId });
+}
+
 // Downloads and uploads any photos not already synced (matched by
 // ownerrez_photo_id), creates a property-image per new photo, and sets
 // property.featured_image from the first photo if it isn't set already.
@@ -51,6 +63,7 @@ async function syncPhotos(app, propertyDoc, photos = []) {
   let created = 0;
   let skipped = 0;
   let failed = 0;
+  let backfillPublished = 0;
   let firstImageFileId = null;
 
   for (let index = 0; index < photos.length; index += 1) {
@@ -64,6 +77,10 @@ async function syncPhotos(app, propertyDoc, photos = []) {
 
     if (existing) {
       skipped += 1;
+      if (!existing.publishedAt) {
+        await ensurePublished(app, existing);
+        backfillPublished += 1;
+      }
       if (index === 0 && existing.image) firstImageFileId = existing.image.id;
       continue;
     }
@@ -84,7 +101,7 @@ async function syncPhotos(app, propertyDoc, photos = []) {
           },
         });
 
-        await app.documents('api::property-image.property-image').create({
+        const createdImage = await app.documents('api::property-image.property-image').create({
           data: {
             image: uploaded.id,
             caption: photo.caption,
@@ -94,6 +111,7 @@ async function syncPhotos(app, propertyDoc, photos = []) {
             property: propertyDoc.documentId,
           },
         });
+        await ensurePublished(app, createdImage);
 
         created += 1;
         if (index === 0) firstImageFileId = uploaded.id;
@@ -113,8 +131,10 @@ async function syncPhotos(app, propertyDoc, photos = []) {
     });
   }
 
-  console.log(`[sync] photos: created ${created}, already synced ${skipped}, failed ${failed}`);
-  return { created, skipped, failed };
+  console.log(
+    `[sync] photos: created ${created}, already synced ${skipped} (${backfillPublished} backfill-published), failed ${failed}`
+  );
+  return { created, skipped, failed, backfillPublished };
 }
 
 module.exports = { syncPhotos, extractPhotoId };
