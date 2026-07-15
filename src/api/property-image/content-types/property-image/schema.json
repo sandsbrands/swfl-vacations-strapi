@@ -22,10 +22,16 @@
       ]
     },
     "caption": {
-      "type": "string"
+      "type": "text"
     },
     "alt_text": {
       "type": "string"
+    },
+    "ownerrez_photo_id": {
+      "type": "string"
+    },
+    "sort_order": {
+      "type": "integer"
     },
     "property": {
       "type": "relation",

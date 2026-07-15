@@ -21,12 +21,18 @@
       "type": "string"
     },
     "description": {
+      "type": "text"
+    },
+    "headline": {
       "type": "string"
     },
     "property_type": {
       "type": "string"
     },
     "address": {
+      "type": "string"
+    },
+    "address_line_2": {
       "type": "string"
     },
     "city": {
@@ -38,7 +44,23 @@
     "zip": {
       "type": "string"
     },
+    "country": {
+      "type": "string"
+    },
+    "latitude": {
+      "type": "decimal"
+    },
+    "longitude": {
+      "type": "decimal"
+    },
+    "location_display_precision": {
+      "type": "enumeration",
+      "enum": ["exact", "approximate"]
+    },
     "ownerrez_property_id": {
+      "type": "string"
+    },
+    "ownerrez_public_url": {
       "type": "string"
     },
     "ical_feed_url": {
@@ -50,8 +72,104 @@
     "lockbox_code": {
       "type": "string"
     },
-    "checkin_instructions": {
+    "checkin_type": {
       "type": "string"
+    },
+    "accommodation_type": {
+      "type": "string"
+    },
+    "house_rules": {
+      "type": "json"
+    },
+    "checkout_tasks": {
+      "type": "json"
+    },
+    "checkin_instructions": {
+      "type": "text"
+    },
+    "check_in_time": {
+      "type": "string"
+    },
+    "check_in_end_time": {
+      "type": "string"
+    },
+    "check_out_time": {
+      "type": "string"
+    },
+    "directions": {
+      "type": "text"
+    },
+    "house_manual": {
+      "type": "text"
+    },
+    "internet_info": {
+      "type": "text"
+    },
+    "guest_access": {
+      "type": "text"
+    },
+    "wifi_network": {
+      "type": "string"
+    },
+    "accommodations_summary": {
+      "type": "text"
+    },
+    "accommodations_detail": {
+      "type": "text"
+    },
+    "features_description": {
+      "type": "text"
+    },
+    "location_description": {
+      "type": "text"
+    },
+    "location_other_activities": {
+      "type": "text"
+    },
+    "getting_there": {
+      "type": "text"
+    },
+    "getting_around": {
+      "type": "text"
+    },
+    "owner_listing_story": {
+      "type": "text"
+    },
+    "why_purchased": {
+      "type": "text"
+    },
+    "unique_benefits": {
+      "type": "text"
+    },
+    "year_purchased": {
+      "type": "integer"
+    },
+    "cancellation_policy": {
+      "type": "text"
+    },
+    "amenity_call_outs": {
+      "type": "json"
+    },
+    "amenity_notes": {
+      "type": "json"
+    },
+    "location_tags": {
+      "type": "json"
+    },
+    "nearby_places": {
+      "type": "json"
+    },
+    "home_safety_features": {
+      "type": "json"
+    },
+    "review_average": {
+      "type": "decimal"
+    },
+    "review_count": {
+      "type": "integer"
+    },
+    "reviews_widget_embed": {
+      "type": "text"
     },
     "stripe_product_id": {
       "type": "string"
@@ -91,6 +209,18 @@
       "type": "relation",
       "relation": "oneToMany",
       "target": "api::property-image.property-image",
+      "mappedBy": "property"
+    },
+    "amenities": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::amenity.amenity",
+      "mappedBy": "properties"
+    },
+    "reviews": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::review.review",
       "mappedBy": "property"
     }
   }

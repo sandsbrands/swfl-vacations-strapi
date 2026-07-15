@@ -1,0 +1,51 @@
+{
+  "kind": "collectionType",
+  "collectionName": "amenities",
+  "info": {
+    "singularName": "amenity",
+    "pluralName": "amenities",
+    "displayName": "Amenity"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name"
+    },
+    "category": {
+      "type": "enumeration",
+      "enum": [
+        "expectations",
+        "popular_amenities",
+        "kitchen",
+        "business",
+        "entertainment",
+        "pool_spa",
+        "outdoor",
+        "theme",
+        "family",
+        "parking",
+        "other_services",
+        "accessibility",
+        "safety"
+      ],
+      "required": true
+    },
+    "icon": {
+      "type": "string"
+    },
+    "properties": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::property.property",
+      "inversedBy": "amenities"
+    }
+  }
+}

@@ -430,6 +430,58 @@ export interface AdminUser extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiAmenityAmenity extends Struct.CollectionTypeSchema {
+  collectionName: 'amenities';
+  info: {
+    displayName: 'Amenity';
+    pluralName: 'amenities';
+    singularName: 'amenity';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    category: Schema.Attribute.Enumeration<
+      [
+        'expectations',
+        'popular_amenities',
+        'kitchen',
+        'business',
+        'entertainment',
+        'pool_spa',
+        'outdoor',
+        'theme',
+        'family',
+        'parking',
+        'other_services',
+        'accessibility',
+        'safety',
+      ]
+    > &
+      Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    icon: Schema.Attribute.String;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::amenity.amenity'
+    > &
+      Schema.Attribute.Private;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    properties: Schema.Attribute.Relation<
+      'manyToMany',
+      'api::property.property'
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    slug: Schema.Attribute.UID<'name'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiBookingBooking extends Struct.CollectionTypeSchema {
   collectionName: 'bookings';
   info: {
@@ -532,6 +584,9 @@ export interface ApiExperienceExperience extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     description: Schema.Attribute.String;
     duration_minutes: Schema.Attribute.Integer;
+    featured_image: Schema.Attribute.Media<
+      'images' | 'files' | 'videos' | 'audios'
+    >;
     ical_feed_url: Schema.Attribute.String;
     is_active: Schema.Attribute.Boolean;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
@@ -599,7 +654,7 @@ export interface ApiPropertyImagePropertyImage
   };
   attributes: {
     alt_text: Schema.Attribute.String;
-    caption: Schema.Attribute.String;
+    caption: Schema.Attribute.Text;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -610,7 +665,10 @@ export interface ApiPropertyImagePropertyImage
       'api::property-image.property-image'
     > &
       Schema.Attribute.Private;
+    ownerrez_photo_id: Schema.Attribute.String;
+    property: Schema.Attribute.Relation<'manyToOne', 'api::property.property'>;
     publishedAt: Schema.Attribute.DateTime;
+    sort_order: Schema.Attribute.Integer;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -628,44 +686,131 @@ export interface ApiPropertyProperty extends Struct.CollectionTypeSchema {
     draftAndPublish: true;
   };
   attributes: {
+    accommodation_type: Schema.Attribute.String;
+    accommodations_detail: Schema.Attribute.Text;
+    accommodations_summary: Schema.Attribute.Text;
     address: Schema.Attribute.String;
+    address_line_2: Schema.Attribute.String;
+    amenities: Schema.Attribute.Relation<'manyToMany', 'api::amenity.amenity'>;
+    amenity_call_outs: Schema.Attribute.JSON;
+    amenity_notes: Schema.Attribute.JSON;
     bathrooms: Schema.Attribute.Integer;
     bedrooms: Schema.Attribute.Integer;
-    checkin_instructions: Schema.Attribute.String;
+    cancellation_policy: Schema.Attribute.Text;
+    check_in_end_time: Schema.Attribute.String;
+    check_in_time: Schema.Attribute.String;
+    check_out_time: Schema.Attribute.String;
+    checkin_instructions: Schema.Attribute.Text;
+    checkin_type: Schema.Attribute.String;
+    checkout_tasks: Schema.Attribute.JSON;
     city: Schema.Attribute.String;
+    country: Schema.Attribute.String;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    description: Schema.Attribute.String;
+    description: Schema.Attribute.Text;
+    directions: Schema.Attribute.Text;
     featured_image: Schema.Attribute.Media<
       'images' | 'files' | 'videos' | 'audios'
     >;
+    features_description: Schema.Attribute.Text;
+    getting_around: Schema.Attribute.Text;
+    getting_there: Schema.Attribute.Text;
+    guest_access: Schema.Attribute.Text;
+    headline: Schema.Attribute.String;
+    home_safety_features: Schema.Attribute.JSON;
+    house_manual: Schema.Attribute.Text;
+    house_rules: Schema.Attribute.JSON;
     ical_feed_url: Schema.Attribute.String;
+    images: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::property-image.property-image'
+    >;
+    internet_info: Schema.Attribute.Text;
     is_active: Schema.Attribute.Boolean;
+    latitude: Schema.Attribute.Decimal;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
       'api::property.property'
     > &
       Schema.Attribute.Private;
+    location_description: Schema.Attribute.Text;
+    location_display_precision: Schema.Attribute.Enumeration<
+      ['exact', 'approximate']
+    >;
+    location_other_activities: Schema.Attribute.Text;
+    location_tags: Schema.Attribute.JSON;
     lockbox_code: Schema.Attribute.String;
+    longitude: Schema.Attribute.Decimal;
     management_tier: Schema.Attribute.String;
     max_occupancy: Schema.Attribute.Integer;
     max_stay: Schema.Attribute.Integer;
     min_stay: Schema.Attribute.Integer;
     name: Schema.Attribute.String;
+    nearby_places: Schema.Attribute.JSON;
+    owner_listing_story: Schema.Attribute.Text;
     ownerrez_property_id: Schema.Attribute.String;
+    ownerrez_public_url: Schema.Attribute.String;
     property_type: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
     qbo_project_id: Schema.Attribute.String;
+    review_average: Schema.Attribute.Decimal;
+    review_count: Schema.Attribute.Integer;
+    reviews: Schema.Attribute.Relation<'oneToMany', 'api::review.review'>;
+    reviews_widget_embed: Schema.Attribute.Text;
     slug: Schema.Attribute.String;
     state: Schema.Attribute.String;
     stripe_product_id: Schema.Attribute.String;
     summary: Schema.Attribute.String;
+    unique_benefits: Schema.Attribute.Text;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    why_purchased: Schema.Attribute.Text;
+    wifi_network: Schema.Attribute.String;
+    year_purchased: Schema.Attribute.Integer;
     zip: Schema.Attribute.String;
+  };
+}
+
+export interface ApiReviewReview extends Struct.CollectionTypeSchema {
+  collectionName: 'reviews';
+  info: {
+    displayName: 'Review';
+    pluralName: 'reviews';
+    singularName: 'review';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    body: Schema.Attribute.Text;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    display_location: Schema.Attribute.String;
+    display_name: Schema.Attribute.String;
+    listing_site: Schema.Attribute.String;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::review.review'
+    > &
+      Schema.Attribute.Private;
+    month_of_stay: Schema.Attribute.Integer;
+    ownerrez_review_id: Schema.Attribute.String & Schema.Attribute.Unique;
+    property: Schema.Attribute.Relation<'manyToOne', 'api::property.property'>;
+    publishedAt: Schema.Attribute.DateTime;
+    response: Schema.Attribute.Text;
+    review_date: Schema.Attribute.Date;
+    reviewer_type: Schema.Attribute.String;
+    stars: Schema.Attribute.Integer;
+    title: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    year_of_stay: Schema.Attribute.Integer;
   };
 }
 
@@ -1216,12 +1361,14 @@ declare module '@strapi/strapi' {
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
+      'api::amenity.amenity': ApiAmenityAmenity;
       'api::booking.booking': ApiBookingBooking;
       'api::experience-booking.experience-booking': ApiExperienceBookingExperienceBooking;
       'api::experience.experience': ApiExperienceExperience;
       'api::owner.owner': ApiOwnerOwner;
       'api::property-image.property-image': ApiPropertyImagePropertyImage;
       'api::property.property': ApiPropertyProperty;
+      'api::review.review': ApiReviewReview;
       'api::vendor.vendor': ApiVendorVendor;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;

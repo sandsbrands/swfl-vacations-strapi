@@ -1,0 +1,137 @@
+{
+  "property": {
+    "id": 100234,
+    "name": "Pelican Palms",
+    "external_name": "Pelican Palms - Waterfront Retreat",
+    "property_type": "SingleFamilyHome",
+    "active": true,
+    "public_url": "https://swflvacations.com/vacation-rental/pelican-palms/",
+    "address": {
+      "street1": "123 Pelican Way",
+      "street2": null,
+      "city": "Fort Myers Beach",
+      "state": "FL",
+      "postal_code": "33931",
+      "country": "US"
+    },
+    "latitude": 26.3250455,
+    "longitude": -81.8125123,
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "max_guests": 10,
+    "check_in": "16:00",
+    "check_in_end": "20:00",
+    "check_out": "10:00"
+  },
+  "listing": {
+    "id": 100234,
+    "descriptions": {
+      "headline": "Waterfront Escape Steps from the Gulf",
+      "short_description": "A bright, waterfront 4-bedroom retreat with a private dock and heated pool.",
+      "description": "Pelican Palms is a spacious waterfront home on a quiet canal just minutes from Fort Myers Beach. Enjoy a private heated pool, a boat dock, and an open-concept living area designed for group getaways.",
+      "accommodations_summary": "4 bedrooms, 3 baths, sleeps 10",
+      "accommodations_detail": "Primary suite with king bed and en-suite bath; two guest rooms with queen beds; bunk room for kids.",
+      "features_description": "Private heated pool, boat dock, and outdoor kitchen with a gas grill.",
+      "location_description": "Located on a quiet canal minutes from Fort Myers Beach and Times Square.",
+      "location_other_activities": "Nearby: Times Square, Lynn Hall Memorial Park, Bowditch Point Park.",
+      "getting_there": "From RSW airport, take San Carlos Blvd south for approximately 25 minutes.",
+      "getting_around": "A car or golf cart is recommended for getting around the island.",
+      "owner_listing_story": "We bought this home in 2015 to share the canal-front lifestyle we love with other families.",
+      "why_purchased": "We fell in love with the direct canal access and the boat dock.",
+      "unique_benefits": "Private heated pool and private boat dock with no bridges to the Gulf.",
+      "year_purchased": 2015,
+      "guest_access": "Keyless entry via smart lock; the door code is sent by text 24 hours before arrival."
+    },
+    "check_in_instructions": "Use the smart lock code sent via email/text 24 hours before check-in.",
+    "directions": "Head west on San Carlos Blvd, cross the bridge onto Estero Island, and turn right on Pelican Way.",
+    "house_manual": "Trash pickup is Tuesday and Friday mornings; bins are on the side of the garage.",
+    "internet_info": "Network: PelicanPalms_5G. Password is provided in your check-in message.",
+    "wifi_network": "PelicanPalms_5G",
+    "review_average": 4.92,
+    "review_count": 2,
+    "amenity_call_outs": [
+      { "icon": "wifi", "text": "Wifi", "title": "Wifi" },
+      { "icon": "pool", "text": "Private Pool", "title": "Private Pool" }
+    ],
+    "amenity_categories": [
+      {
+        "caption": "Popular Amenities",
+        "type": "PopularAmenities",
+        "amenities": [
+          { "icon": "wifi", "text": "Wifi", "title": "Wifi" },
+          { "icon": "ac", "text": "AC", "title": "AC" },
+          { "icon": "washer", "text": "Washer/Dryer", "title": "Washer/Dryer" }
+        ]
+      },
+      {
+        "caption": "Kitchen & Dining",
+        "type": "KitchenDining",
+        "amenities": [
+          { "icon": "kitchen", "text": "Kitchen", "title": "Kitchen" },
+          { "icon": "dishwasher", "text": "Dishwasher", "title": "Dishwasher" },
+          { "icon": "coffee", "text": "Coffee Maker", "title": "Coffee Maker" }
+        ]
+      },
+      {
+        "caption": "Pool & Spa Facilities",
+        "type": "PoolSpa",
+        "amenities": [
+          { "icon": "pool", "text": "Communal/Private Pool", "title": "Communal/Private Pool" },
+          { "icon": "heated", "text": "Heated", "title": "Heated" }
+        ]
+      },
+      {
+        "caption": "Outdoor Features",
+        "type": "OutdoorFeatures",
+        "amenities": [
+          { "icon": "grill", "text": "Grill", "title": "Grill" },
+          { "icon": "dock", "text": "Boat Slip", "title": "Boat Slip" }
+        ]
+      },
+      {
+        "caption": "Expectations",
+        "type": "Expectations",
+        "amenities": [
+          { "icon": "water", "text": "Near Lake/River/Water Body", "title": "Near Lake/River/Water Body" }
+        ]
+      },
+      {
+        "caption": "Some Future Category OwnerRez Might Add",
+        "type": "FutureCategory",
+        "amenities": [
+          { "icon": "drone", "text": "Drone Landing Pad", "title": "Drone Landing Pad" }
+        ]
+      }
+    ]
+  },
+  "reviews": [
+    {
+      "id": 555001,
+      "title": "Perfect waterfront getaway",
+      "body": "We had an amazing week on the canal - the dock and pool were the highlight of the trip.",
+      "stars": 5,
+      "response": "Thank you so much for staying with us!",
+      "listing_site": "Airbnb",
+      "reviewer_type": "guest",
+      "display_name": "Sarah M.",
+      "display_location": "Columbus, OH",
+      "date": "2026-03-10",
+      "month_of_stay": 3,
+      "year_of_stay": 2026
+    },
+    {
+      "id": 555002,
+      "title": "Great dock access",
+      "body": "Loved having our own boat slip right at the house.",
+      "stars": 5,
+      "response": null,
+      "listing_site": "Vrbo",
+      "reviewer_type": "guest",
+      "display_name": "Tom R.",
+      "display_location": "Chicago, IL",
+      "date": "2026-01-22",
+      "month_of_stay": 1,
+      "year_of_stay": 2026
+    }
+  ]
+}

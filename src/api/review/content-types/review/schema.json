@@ -1,0 +1,58 @@
+{
+  "kind": "collectionType",
+  "collectionName": "reviews",
+  "info": {
+    "singularName": "review",
+    "pluralName": "reviews",
+    "displayName": "Review"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "ownerrez_review_id": {
+      "type": "string",
+      "unique": true
+    },
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "text"
+    },
+    "stars": {
+      "type": "integer"
+    },
+    "response": {
+      "type": "text"
+    },
+    "listing_site": {
+      "type": "string"
+    },
+    "reviewer_type": {
+      "type": "string"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "display_location": {
+      "type": "string"
+    },
+    "review_date": {
+      "type": "date"
+    },
+    "month_of_stay": {
+      "type": "integer"
+    },
+    "year_of_stay": {
+      "type": "integer"
+    },
+    "property": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::property.property",
+      "inversedBy": "reviews"
+    }
+  }
+}
