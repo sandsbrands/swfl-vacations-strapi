@@ -195,6 +195,10 @@
     "is_active": {
       "type": "boolean"
     },
+    "featured": {
+      "type": "boolean",
+      "default": false
+    },
     "featured_image": {
       "type": "media",
       "multiple": false,
