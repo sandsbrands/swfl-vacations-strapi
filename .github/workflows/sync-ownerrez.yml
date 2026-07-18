@@ -25,8 +25,10 @@ jobs:
       run:
         # This machine's PowerShell execution policy blocks running
         # scripts, which is what plain `run:` steps use by default on
-        # Windows runners - Git Bash (already installed) works instead.
-        shell: bash
+        # Windows runners. Git Bash works instead, but the Windows
+        # service's PATH doesn't include it, so the plain `bash`
+        # shell keyword can't find it - use its full path explicitly.
+        shell: 'C:\Program Files\Git\bin\bash.exe -e {0}'
     steps:
       - uses: actions/checkout@v4
 
