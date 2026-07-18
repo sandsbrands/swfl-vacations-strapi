@@ -655,6 +655,7 @@ export interface ApiPropertyImagePropertyImage
   attributes: {
     alt_text: Schema.Attribute.String;
     caption: Schema.Attribute.Text;
+    content_hash: Schema.Attribute.String;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;

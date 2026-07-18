@@ -113,6 +113,28 @@ function documents(uid) {
       });
       return json.data;
     },
+    // Pages through the full result set - callers (photo cleanup) need every
+    // matching record, not just the first page's worth.
+    async findMany({ filters, populate } = {}) {
+      const pageSize = 100;
+      let page = 1;
+      const all = [];
+      for (;;) {
+        const query = { 'pagination[page]': page, 'pagination[pageSize]': pageSize };
+        if (draft) query.status = 'draft';
+        if (filters) query.filters = filters;
+        if (populate) query.populate = populate;
+        const json = await request('GET', collectionPath, { query });
+        all.push(...(json.data || []));
+        const pageCount = json.meta?.pagination?.pageCount || 1;
+        if (page >= pageCount) break;
+        page += 1;
+      }
+      return all;
+    },
+    async delete({ documentId }) {
+      await request('DELETE', `${collectionPath}/${documentId}`, {});
+    },
   };
 }
 

@@ -30,6 +30,9 @@
     "ownerrez_photo_id": {
       "type": "string"
     },
+    "content_hash": {
+      "type": "string"
+    },
     "sort_order": {
       "type": "integer"
     },
