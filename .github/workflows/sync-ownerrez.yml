@@ -25,11 +25,20 @@ jobs:
       run:
         # This machine's PowerShell execution policy blocks running
         # scripts, which is what plain `run:` steps use by default on
-        # Windows runners. Git Bash works instead, but the Windows
-        # service's PATH doesn't include it, so the plain `bash`
-        # shell keyword can't find it - use its full path explicitly.
-        shell: 'C:\Program Files\Git\bin\bash.exe -e {0}'
+        # Windows runners - Git Bash works instead. The Windows
+        # service's PATH doesn't include it (see the PATH step below),
+        # so a plain `shell: bash` alone can't resolve it; embedding
+        # bash.exe's full path directly in `shell:` also doesn't work
+        # here (GitHub Actions' path handling rejects a raw drive
+        # letter in that field: "Second path fragment must not be a
+        # drive or UNC name"). Prepending to PATH and using the plain
+        # keyword avoids both problems.
+        shell: bash
     steps:
+      - name: Add Git Bash to PATH
+        shell: cmd
+        run: echo C:\Program Files\Git\bin>>%GITHUB_PATH%
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
