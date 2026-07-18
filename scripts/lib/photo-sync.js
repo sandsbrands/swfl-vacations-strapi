@@ -74,7 +74,7 @@ async function syncPhotos(app, propertyDoc, photos = []) {
   const propertyImages = app.documents('api::property-image.property-image');
 
   const existing = await propertyImages.findMany({
-    filters: { property: propertyDoc.documentId },
+    filters: { property: { documentId: propertyDoc.documentId } },
     populate: ['image'],
   });
   const existingByPhotoId = new Map(existing.map((doc) => [doc.ownerrez_photo_id, doc]));

@@ -115,7 +115,7 @@ function documents(uid) {
     },
     // Pages through the full result set - callers (photo cleanup) need every
     // matching record, not just the first page's worth.
-    async findMany({ filters, populate } = {}) {
+    async findMany({ filters, populate, fields } = {}) {
       const pageSize = 100;
       let page = 1;
       const all = [];
@@ -124,6 +124,7 @@ function documents(uid) {
         if (draft) query.status = 'draft';
         if (filters) query.filters = filters;
         if (populate) query.populate = populate;
+        if (fields) query.fields = fields;
         const json = await request('GET', collectionPath, { query });
         all.push(...(json.data || []));
         const pageCount = json.meta?.pagination?.pageCount || 1;

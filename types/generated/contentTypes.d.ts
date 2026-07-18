@@ -754,6 +754,7 @@ export interface ApiPropertyProperty extends Struct.CollectionTypeSchema {
     owner_listing_story: Schema.Attribute.Text;
     ownerrez_property_id: Schema.Attribute.String;
     ownerrez_public_url: Schema.Attribute.String;
+    ownerrez_widget_property_id: Schema.Attribute.String;
     property_type: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
     qbo_project_id: Schema.Attribute.String;

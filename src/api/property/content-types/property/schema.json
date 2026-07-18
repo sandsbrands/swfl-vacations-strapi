@@ -63,6 +63,9 @@
     "ownerrez_public_url": {
       "type": "string"
     },
+    "ownerrez_widget_property_id": {
+      "type": "string"
+    },
     "ical_feed_url": {
       "type": "string"
     },
