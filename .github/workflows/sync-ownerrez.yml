@@ -57,7 +57,7 @@ jobs:
           STRAPI_API_TOKEN: ${{ secrets.STRAPI_API_TOKEN }}
         run: |
           if [ "${{ inputs.dryRun }}" = "true" ]; then
-            node scripts/sync-ownerrez.js --remote --dry-run
+            node scripts/sync-ownerrez.js --remote --with-photos --dry-run
           else
-            node scripts/sync-ownerrez.js --remote
+            node scripts/sync-ownerrez.js --remote --with-photos
           fi
