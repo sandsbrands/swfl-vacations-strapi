@@ -17,7 +17,10 @@ on:
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
+    # OwnerRez enforces an IP allowlist, and GitHub-hosted runners use
+    # dynamic IPs that can't satisfy it - this runs on a self-hosted
+    # runner installed on the already-allowlisted machine instead.
+    runs-on: [self-hosted, owner-machine]
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +38,7 @@ jobs:
           OWNERREZ_API_TOKEN: ${{ secrets.OWNERREZ_API_TOKEN }}
           STRAPI_URL: ${{ secrets.STRAPI_URL }}
           STRAPI_API_TOKEN: ${{ secrets.STRAPI_API_TOKEN }}
+        shell: bash
         run: |
           if [ "${{ inputs.dryRun }}" = "true" ]; then
             node scripts/sync-ownerrez.js --remote --dry-run
