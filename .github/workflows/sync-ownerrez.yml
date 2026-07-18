@@ -1,0 +1,43 @@
+name: Sync OwnerRez to Strapi Cloud
+
+on:
+  schedule:
+    # 10:00 UTC = 6:00 AM US Eastern during EDT (roughly mid-March to
+    # early November), 5:00 AM during EST (the rest of the year). Cron
+    # on GitHub Actions has no timezone support, so this drifts by an
+    # hour across the DST boundary rather than staying pinned to 6 AM
+    # year-round - acceptable for a daily content sync.
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: 'Dry run (log only, write nothing)'
+        type: boolean
+        default: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run OwnerRez sync (remote)
+        env:
+          OWNERREZ_API_BASE_URL: ${{ secrets.OWNERREZ_API_BASE_URL }}
+          OWNERREZ_API_KEY: ${{ secrets.OWNERREZ_API_KEY }}
+          OWNERREZ_API_TOKEN: ${{ secrets.OWNERREZ_API_TOKEN }}
+          STRAPI_URL: ${{ secrets.STRAPI_URL }}
+          STRAPI_API_TOKEN: ${{ secrets.STRAPI_API_TOKEN }}
+        run: |
+          if [ "${{ inputs.dryRun }}" = "true" ]; then
+            node scripts/sync-ownerrez.js --remote --dry-run
+          else
+            node scripts/sync-ownerrez.js --remote
+          fi
