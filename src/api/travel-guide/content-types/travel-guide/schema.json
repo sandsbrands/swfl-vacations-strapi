@@ -31,6 +31,11 @@
       "multiple": false,
       "allowedTypes": ["images"]
     },
+    "gallery": {
+      "type": "media",
+      "multiple": true,
+      "allowedTypes": ["images"]
+    },
     "author": {
       "type": "string"
     },
