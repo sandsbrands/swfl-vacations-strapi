@@ -482,56 +482,6 @@ export interface ApiAmenityAmenity extends Struct.CollectionTypeSchema {
   };
 }
 
-export interface ApiBlogPostBlogPost extends Struct.CollectionTypeSchema {
-  collectionName: 'blog_posts';
-  info: {
-    displayName: 'Blog Post';
-    pluralName: 'blog-posts';
-    singularName: 'blog-post';
-  };
-  options: {
-    draftAndPublish: true;
-  };
-  attributes: {
-    author: Schema.Attribute.String;
-    category: Schema.Attribute.Enumeration<
-      [
-        'Area Guides',
-        'Things to Do',
-        'Property Spotlights',
-        'Restaurants & Food',
-        'Travel Tips',
-        'Local Events & Seasonal',
-      ]
-    >;
-    content: Schema.Attribute.Blocks;
-    createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    excerpt: Schema.Attribute.Text;
-    featured_image: Schema.Attribute.Media<'images'>;
-    locale: Schema.Attribute.String & Schema.Attribute.Private;
-    localizations: Schema.Attribute.Relation<
-      'oneToMany',
-      'api::blog-post.blog-post'
-    > &
-      Schema.Attribute.Private;
-    published_date: Schema.Attribute.Date;
-    publishedAt: Schema.Attribute.DateTime;
-    related_property: Schema.Attribute.Relation<
-      'manyToOne',
-      'api::property.property'
-    >;
-    seo_description: Schema.Attribute.Text;
-    seo_title: Schema.Attribute.String;
-    slug: Schema.Attribute.UID<'title'> & Schema.Attribute.Required;
-    title: Schema.Attribute.String & Schema.Attribute.Required;
-    updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-  };
-}
-
 export interface ApiBookingBooking extends Struct.CollectionTypeSchema {
   collectionName: 'bookings';
   info: {
@@ -864,6 +814,56 @@ export interface ApiReviewReview extends Struct.CollectionTypeSchema {
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     year_of_stay: Schema.Attribute.Integer;
+  };
+}
+
+export interface ApiTravelGuideTravelGuide extends Struct.CollectionTypeSchema {
+  collectionName: 'travel_guides';
+  info: {
+    displayName: 'Travel Guide';
+    pluralName: 'travel-guides';
+    singularName: 'travel-guide';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    author: Schema.Attribute.String;
+    category: Schema.Attribute.Enumeration<
+      [
+        'Area Guides',
+        'Things to Do',
+        'Property Spotlights',
+        'Restaurants & Food',
+        'Travel Tips',
+        'Local Events & Seasonal',
+      ]
+    >;
+    content: Schema.Attribute.Blocks;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    excerpt: Schema.Attribute.Text;
+    featured_image: Schema.Attribute.Media<'images'>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::travel-guide.travel-guide'
+    > &
+      Schema.Attribute.Private;
+    published_date: Schema.Attribute.Date;
+    publishedAt: Schema.Attribute.DateTime;
+    related_property: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::property.property'
+    >;
+    seo_description: Schema.Attribute.Text;
+    seo_title: Schema.Attribute.String;
+    slug: Schema.Attribute.UID<'title'> & Schema.Attribute.Required;
+    title: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
   };
 }
 
@@ -1415,7 +1415,6 @@ declare module '@strapi/strapi' {
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
       'api::amenity.amenity': ApiAmenityAmenity;
-      'api::blog-post.blog-post': ApiBlogPostBlogPost;
       'api::booking.booking': ApiBookingBooking;
       'api::experience-booking.experience-booking': ApiExperienceBookingExperienceBooking;
       'api::experience.experience': ApiExperienceExperience;
@@ -1423,6 +1422,7 @@ declare module '@strapi/strapi' {
       'api::property-image.property-image': ApiPropertyImagePropertyImage;
       'api::property.property': ApiPropertyProperty;
       'api::review.review': ApiReviewReview;
+      'api::travel-guide.travel-guide': ApiTravelGuideTravelGuide;
       'api::vendor.vendor': ApiVendorVendor;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;

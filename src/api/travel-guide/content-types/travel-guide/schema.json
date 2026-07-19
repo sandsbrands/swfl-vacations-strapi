@@ -1,10 +1,10 @@
 {
   "kind": "collectionType",
-  "collectionName": "blog_posts",
+  "collectionName": "travel_guides",
   "info": {
-    "singularName": "blog-post",
-    "pluralName": "blog-posts",
-    "displayName": "Blog Post"
+    "singularName": "travel-guide",
+    "pluralName": "travel-guides",
+    "displayName": "Travel Guide"
   },
   "options": {
     "draftAndPublish": true
