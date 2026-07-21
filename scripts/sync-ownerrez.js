@@ -27,7 +27,7 @@ const fs = require('fs');
 const path = require('path');
 const { compileStrapi, createStrapi } = require('@strapi/strapi');
 const ownerRez = require('./lib/ownerrez-client');
-const { processCategories } = require('./lib/amenity-categories');
+const { processCategories, extractHeatedPoolItem } = require('./lib/amenity-categories');
 const { syncPhotos } = require('./lib/photo-sync');
 const { createRemoteApp } = require('./lib/strapi-remote-client');
 
@@ -108,6 +108,9 @@ async function ensureAmenity(app, name, category) {
 
 async function syncAmenitiesAndCategories(app, listing) {
   const { amenityItems, locationTags, structuredFields, unmapped } = processCategories(listing.amenity_categories);
+
+  const heatedPoolItem = extractHeatedPoolItem(listing.amenity_call_outs);
+  if (heatedPoolItem) amenityItems.push(heatedPoolItem);
 
   const amenityDocIds = [];
   const amenityNotes = {};

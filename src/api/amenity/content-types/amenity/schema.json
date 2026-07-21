@@ -34,7 +34,8 @@
         "parking",
         "other_services",
         "accessibility",
-        "safety"
+        "safety",
+        "sleeping_arrangements"
       ],
       "required": true
     },
