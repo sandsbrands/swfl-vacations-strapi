@@ -110,9 +110,14 @@ async function listReviewsForProperty(propertyId) {
   return fetchAllPages('reviews', { property_id: propertyId });
 }
 
+async function listTagsForProperty(propertyId) {
+  return fetchAllPages('tags', { entity_type: 'property', entity_id: propertyId });
+}
+
 module.exports = {
   getProperty,
   listProperties,
   getListing,
   listReviewsForProperty,
+  listTagsForProperty,
 };

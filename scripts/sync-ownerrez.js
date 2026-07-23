@@ -82,12 +82,13 @@ async function loadLiveBundles(propertyIds) {
   const bundles = [];
   for (const id of ids) {
     try {
-      const [property, listing, reviews] = await Promise.all([
+      const [property, listing, reviews, tags] = await Promise.all([
         ownerRez.getProperty(id),
         ownerRez.getListing(id),
         ownerRez.listReviewsForProperty(id),
+        ownerRez.listTagsForProperty(id),
       ]);
-      bundles.push({ property, listing, reviews });
+      bundles.push({ property, listing, reviews, tags });
     } catch (err) {
       console.error(`[sync] failed to fetch OwnerRez data for property #${id}, skipping: ${err.message}`);
     }
@@ -127,7 +128,16 @@ async function syncAmenitiesAndCategories(app, listing) {
   return { amenityDocIds, amenityNotes, locationTags, structuredFields };
 }
 
-function buildSyncedFields(apiProperty, listing, categoryData) {
+// OwnerRez's account-level Tags feature (GET /v2/tags?entity_type=property),
+// not amenity_categories - a separate tagging system used to flag things
+// like seasonal-only rentals.
+const SEASONAL_RENTAL_TAG = 'seasonal rental';
+
+function isSeasonalRental(tags = []) {
+  return tags.some((tag) => tag.name?.trim().toLowerCase() === SEASONAL_RENTAL_TAG);
+}
+
+function buildSyncedFields(apiProperty, listing, tags, categoryData) {
   const address = apiProperty.address || {};
   const descriptions = listing.descriptions || {};
   const { locationTags, structuredFields, amenityNotes } = categoryData;
@@ -184,6 +194,7 @@ function buildSyncedFields(apiProperty, listing, categoryData) {
     review_count: listing.review_count,
 
     amenity_call_outs: listing.amenity_call_outs || [],
+    is_seasonal_rental: isSeasonalRental(tags),
   });
 }
 
@@ -227,7 +238,7 @@ async function syncReviews(app, propertyDocumentId, reviews = []) {
 }
 
 async function upsertProperty(app, bundle, { withPhotos } = {}) {
-  const { property: apiProperty, listing, reviews } = bundle;
+  const { property: apiProperty, listing, reviews, tags = [] } = bundle;
   const ownerrezPropertyId = String(apiProperty.id);
 
   const existing = await app.documents('api::property.property').findFirst({
@@ -238,7 +249,7 @@ async function upsertProperty(app, bundle, { withPhotos } = {}) {
     app,
     listing
   );
-  const syncedFields = buildSyncedFields(apiProperty, listing, { locationTags, structuredFields, amenityNotes });
+  const syncedFields = buildSyncedFields(apiProperty, listing, tags, { locationTags, structuredFields, amenityNotes });
 
   let propertyDoc;
   if (existing) {

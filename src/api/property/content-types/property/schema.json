@@ -202,6 +202,10 @@
       "type": "boolean",
       "default": false
     },
+    "is_seasonal_rental": {
+      "type": "boolean",
+      "default": false
+    },
     "featured_image": {
       "type": "media",
       "multiple": false,
