@@ -1,0 +1,34 @@
+name: One-off - Create Area Guides
+
+# One-time content migration (see scripts/create-area-guides.js) - manual
+# trigger only, no schedule. Safe to re-run: the script skips any guide
+# whose slug already exists rather than duplicating.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  create:
+    runs-on: [self-hosted, owner-machine]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Add Git Bash to PATH
+        shell: cmd
+        run: echo C:\Program Files\Git\bin>>%GITHUB_PATH%
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run create-area-guides (remote)
+        env:
+          STRAPI_URL: ${{ secrets.STRAPI_URL }}
+          STRAPI_API_TOKEN: ${{ secrets.STRAPI_API_TOKEN }}
+        run: node scripts/create-area-guides.js --remote
