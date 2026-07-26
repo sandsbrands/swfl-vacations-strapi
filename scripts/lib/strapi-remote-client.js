@@ -13,6 +13,7 @@ const PLURAL_ROUTES = {
   'api::amenity.amenity': 'amenities',
   'api::review.review': 'reviews',
   'api::property-image.property-image': 'property-images',
+  'api::travel-guide.travel-guide': 'travel-guides',
 };
 
 // Both property and property-image have draftAndPublish enabled. The REST
