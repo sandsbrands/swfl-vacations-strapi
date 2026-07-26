@@ -61,3 +61,19 @@ jobs:
           else
             node scripts/sync-ownerrez.js --remote --with-photos
           fi
+
+      # OwnerRez's API has no field for the widget-embed property GUID (see
+      # scripts/backfill-widget-ids.js) - it only appears in the booking/
+      # inquiry widget already embedded on the property's own
+      # swflvacations.com page, so this scrapes it from there instead. Only
+      # fills properties where ownerrez_widget_property_id is still empty;
+      # never overwrites an existing value. Skipped on dry runs since the
+      # script has no --dry-run mode of its own. Properties whose public
+      # page doesn't have that widget embedded yet (or isn't live yet) will
+      # fail this step harmlessly and still need the ID entered by hand.
+      - name: Backfill missing widget property IDs (remote)
+        if: ${{ inputs.dryRun != true }}
+        env:
+          STRAPI_URL: ${{ secrets.STRAPI_URL }}
+          STRAPI_API_TOKEN: ${{ secrets.STRAPI_API_TOKEN }}
+        run: node scripts/backfill-widget-ids.js --remote
