@@ -114,8 +114,8 @@ async function listTagsForProperty(propertyId) {
   return fetchAllPages('tags', { entity_type: 'property', entity_id: propertyId });
 }
 
-async function listBookings({ since_utc, status, include_guest } = {}) {
-  return fetchAllPages('bookings', { since_utc, status, include_guest });
+async function listBookings({ since_utc, status, include_guest, include_door_codes, from, to } = {}) {
+  return fetchAllPages('bookings', { since_utc, status, include_guest, include_door_codes, from, to });
 }
 
 async function getGuest(guestId) {

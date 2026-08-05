@@ -16,22 +16,26 @@
 // booking_channel custom fields), and the `str_checkin_start` tag added to
 // fire the check-in workflow.
 //
-// Already-mirrored bookings are skipped entirely on later runs - if
+// Already-mirrored bookings are otherwise skipped on later runs - if
 // OwnerRez-side details change afterward (e.g. dates), this deliberately
 // does NOT re-sync or re-tag, since re-adding the tag would re-fire the
-// workflow and risk duplicate check-in messaging for the guest.
+// workflow and risk duplicate check-in messaging for the guest. The one
+// exception is the door code backfill pass below.
 //
-// Door code note: OwnerRez's own booking API has no door-code data for this
-// account (confirmed against 768 real bookings with include_door_codes=true
-// - the field never appears), so the door code sent to GHL comes from the
-// already-synced `property` content-type's `lockbox_code` field instead
-// (manually curated per property in Strapi, per this project's normal
-// workflow). wifi_name/wifi_password are still never populated/sent -
-// nothing in this feature's scope needs them.
+// Door code note: OwnerRez does have real door-code data
+// (`booking.door_codes`, an array of {code, lock_names}), confirmed against
+// a real booking - but it's populated close to arrival, not at booking
+// time, so a booking synced right after it's made (often months out) won't
+// have one yet. A second query below re-checks bookings arriving in the
+// next 14 days and backfills `lockbox_code` (Strapi + a GHL custom-field
+// update only, no re-tagging) for any that now have a code but didn't
+// before. wifi_name/wifi_password are still never populated/sent - nothing
+// in this feature's scope needs them.
 //
 // No persisted cursor/watermark: each run just re-queries a generous 48h
-// lookback window and relies on the ownerrez_booking_id dedup check above to
-// make reprocessing safe, matching sync-ownerrez.js's existing simple style.
+// lookback window (plus the 14-day arrival window for the backfill pass)
+// and relies on the ownerrez_booking_id dedup check to make reprocessing
+// safe, matching sync-ownerrez.js's existing simple style.
 
 require('dotenv').config();
 
@@ -41,6 +45,7 @@ const ghl = require('./lib/ghl-client');
 const { createRemoteApp } = require('./lib/strapi-remote-client');
 
 const LOOKBACK_HOURS = 48;
+const ARRIVAL_WINDOW_DAYS = 14;
 const CHECKIN_TAG = 'str_checkin_start';
 
 function parseArgs(argv) {
@@ -88,17 +93,20 @@ async function fetchGuestContact(guestId) {
 
 // property_type isn't in the booking response's nested `property` object
 // (only id/name/external_name/internal_code/public_url), so this is a
-// separate OwnerRez call. lockbox_code comes from Strapi instead - see the
-// door-code note at the top of this file.
-async function fetchPropertyExtras(app, propertyId) {
-  const [apiProperty, strapiProperty] = await Promise.all([
-    ownerRez.getProperty(propertyId),
-    app.documents('api::property.property').findFirst({ filters: { ownerrez_property_id: String(propertyId) } }),
-  ]);
-  return {
-    propertyType: apiProperty.property_type,
-    doorCode: strapiProperty?.lockbox_code,
-  };
+// separate OwnerRez call.
+async function fetchPropertyType(propertyId) {
+  const apiProperty = await ownerRez.getProperty(propertyId);
+  return apiProperty.property_type;
+}
+
+// booking.door_codes is an array of {code, lock_names} - most properties
+// have one lock, but this joins multiple readably rather than just taking
+// the first and silently dropping the rest.
+function extractDoorCode(booking) {
+  const codes = booking.door_codes || [];
+  if (codes.length === 0) return undefined;
+  if (codes.length === 1) return codes[0].code;
+  return codes.map((dc) => (dc.lock_names ? `${dc.lock_names}: ${dc.code}` : dc.code)).join('; ');
 }
 
 function nightsBetween(arrival, departure) {
@@ -110,7 +118,7 @@ function nightsBetween(arrival, departure) {
 // booking.check_in/check_out fields are just check-in/out *times* (e.g.
 // "16:00") - unrelated to the Strapi schema's check_in/check_out date
 // fields, which arrival/departure map onto instead.
-function buildBookingFields(booking, guestContact, propertyExtras) {
+function buildBookingFields(booking, guestContact) {
   return stripUndefined({
     ownerrez_booking_id: String(booking.id),
     booking_id: booking.platform_reservation_number,
@@ -121,7 +129,7 @@ function buildBookingFields(booking, guestContact, propertyExtras) {
     property_name: booking.property?.name || booking.property?.external_name,
     booking_source: booking.listing_site,
     booking_status: booking.status,
-    lockbox_code: propertyExtras.doorCode,
+    lockbox_code: extractDoorCode(booking),
     number_of_guests: (booking.adults || 0) + (booking.children || 0) + (booking.infants || 0),
     number_of_nights: nightsBetween(booking.arrival, booking.departure),
     // Schema field is `integer`; OwnerRez returns a decimal dollar amount.
@@ -133,7 +141,7 @@ function buildBookingFields(booking, guestContact, propertyExtras) {
   });
 }
 
-async function syncToGhl(bookingFields, guestContact, propertyExtras) {
+async function syncToGhl(bookingFields, guestContact, propertyType) {
   const contact = await ghl.upsertContact({
     firstName: bookingFields.guest_first_name,
     lastName: bookingFields.guest_last_name,
@@ -148,13 +156,12 @@ async function syncToGhl(bookingFields, guestContact, propertyExtras) {
       { key: 'checkin_date', field_value: bookingFields.check_in },
       { key: 'checkout_date', field_value: bookingFields.check_out },
       { key: 'property_booked', field_value: bookingFields.property_name },
-      { key: 'property_type', field_value: propertyExtras.propertyType },
+      { key: 'property_type', field_value: propertyType },
       { key: 'door_code', field_value: bookingFields.lockbox_code },
       { key: 'reservation_number', field_value: bookingFields.booking_id },
       { key: 'booking_channel', field_value: bookingFields.booking_source },
     ].filter((f) => f.field_value !== undefined && f.field_value !== null),
   });
-  await ghl.addTags({ contactId: contact.id, tags: [CHECKIN_TAG] });
   return contact;
 }
 
@@ -165,11 +172,11 @@ async function processBooking(app, booking, { dryRun }) {
   });
   if (existing) return { status: 'skipped' };
 
-  const [guestContact, propertyExtras] = await Promise.all([
+  const [guestContact, propertyType] = await Promise.all([
     fetchGuestContact(booking.guest_id),
-    fetchPropertyExtras(app, booking.property_id),
+    fetchPropertyType(booking.property_id),
   ]);
-  const bookingFields = buildBookingFields(booking, guestContact, propertyExtras);
+  const bookingFields = buildBookingFields(booking, guestContact);
 
   if (dryRun) {
     console.log(`[sync] (dry run) would create booking #${ownerrezBookingId}:`);
@@ -180,7 +187,7 @@ async function processBooking(app, booking, { dryRun }) {
           guest_address: [guestContact.address1, guestContact.city, guestContact.state, guestContact.postalCode, guestContact.country]
             .filter(Boolean)
             .join(', '),
-          property_type: propertyExtras.propertyType,
+          property_type: propertyType,
         },
         null,
         2
@@ -196,11 +203,53 @@ async function processBooking(app, booking, { dryRun }) {
     return { status: 'created-no-ghl' };
   }
 
-  await syncToGhl(bookingFields, guestContact, propertyExtras);
+  const contact = await syncToGhl(bookingFields, guestContact, propertyType);
+  await ghl.addTags({ contactId: contact.id, tags: [CHECKIN_TAG] });
   console.log(
     `[sync] created booking #${ownerrezBookingId}, synced ${bookingFields.guest_email} to GHL, tagged ${CHECKIN_TAG}`
   );
   return { status: 'created' };
+}
+
+// Bookings made far ahead of arrival won't have a door code yet (OwnerRez
+// only populates booking.door_codes close to the stay - confirmed against
+// live data). This re-checks bookings arriving soon and, for any already in
+// Strapi with no code yet, updates Strapi + the GHL custom field only - no
+// addTags call, so it never re-fires the check-in workflow.
+async function backfillDoorCode(app, booking, { dryRun }) {
+  const doorCode = extractDoorCode(booking);
+  if (!doorCode) return { status: 'no-code-yet' };
+
+  const ownerrezBookingId = String(booking.id);
+  const existing = await app.documents('api::booking.booking').findFirst({
+    filters: { ownerrez_booking_id: ownerrezBookingId },
+  });
+  if (!existing || existing.lockbox_code) return { status: 'backfill-skipped' };
+
+  if (dryRun) {
+    console.log(`[sync] (dry run) would backfill door code for booking #${ownerrezBookingId}: ${doorCode}`);
+    return { status: 'would-backfill' };
+  }
+
+  await app.documents('api::booking.booking').update({ documentId: existing.documentId, data: { lockbox_code: doorCode } });
+
+  if (!existing.guest_email) {
+    console.warn(`[sync] booking #${ownerrezBookingId} backfilled in Strapi but has no guest email - GHL not updated`);
+    return { status: 'backfilled-no-ghl' };
+  }
+
+  await ghl.upsertContact({
+    firstName: existing.guest_first_name,
+    lastName: existing.guest_last_name,
+    email: existing.guest_email,
+    customFields: [{ key: 'door_code', field_value: doorCode }],
+  });
+  console.log(`[sync] backfilled door code for booking #${ownerrezBookingId} in Strapi + GHL`);
+  return { status: 'backfilled' };
+}
+
+function isoDate(date) {
+  return date.toISOString().slice(0, 10);
 }
 
 async function main() {
@@ -210,20 +259,49 @@ async function main() {
   // of relying on the 48h default.
   const lookbackHours = args.bookingIds.length > 0 ? 400 * 24 : LOOKBACK_HOURS;
   const sinceUtc = new Date(Date.now() - lookbackHours * 60 * 60 * 1000).toISOString();
-  let bookings = await ownerRez.listBookings({ since_utc: sinceUtc, status: 'Active', include_guest: true });
+  let newBookings = await ownerRez.listBookings({
+    since_utc: sinceUtc,
+    status: 'Active',
+    include_guest: true,
+    include_door_codes: true,
+  });
   if (args.bookingIds.length > 0) {
-    bookings = bookings.filter((b) => args.bookingIds.includes(String(b.id)));
+    newBookings = newBookings.filter((b) => args.bookingIds.includes(String(b.id)));
   }
 
-  if (bookings.length === 0) {
-    console.log('[sync] no active bookings in the lookback window');
+  const today = new Date();
+  const windowEnd = new Date(today.getTime() + ARRIVAL_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const arrivingSoonBookings = await ownerRez.listBookings({
+    // OwnerRez requires since_utc (or property_ids) on every /bookings call
+    // even when filtering by from/to - this is just to satisfy that, not a
+    // real filter (from/to already scope this to the arrival window).
+    since_utc: new Date('2020-01-01').toISOString(),
+    from: isoDate(today),
+    to: isoDate(windowEnd),
+    status: 'Active',
+    include_door_codes: true,
+  });
+
+  if (newBookings.length === 0 && arrivingSoonBookings.length === 0) {
+    console.log('[sync] nothing to sync');
     return;
   }
 
   const app = await bootApp(args.remote);
-  const counts = { created: 0, 'created-no-ghl': 0, skipped: 0, 'would-create': 0, failed: 0 };
+  const counts = {
+    created: 0,
+    'created-no-ghl': 0,
+    skipped: 0,
+    'would-create': 0,
+    backfilled: 0,
+    'backfilled-no-ghl': 0,
+    'would-backfill': 0,
+    'no-code-yet': 0,
+    'backfill-skipped': 0,
+    failed: 0,
+  };
   try {
-    for (const booking of bookings) {
+    for (const booking of newBookings) {
       try {
         const { status } = await processBooking(app, booking, { dryRun: args.dryRun });
         counts[status] += 1;
@@ -232,14 +310,27 @@ async function main() {
         console.error(`[sync] booking #${booking.id} failed, continuing with the rest: ${err.message}`);
       }
     }
+    for (const booking of arrivingSoonBookings) {
+      try {
+        const { status } = await backfillDoorCode(app, booking, { dryRun: args.dryRun });
+        counts[status] += 1;
+      } catch (err) {
+        counts.failed += 1;
+        console.error(`[sync] door-code backfill for booking #${booking.id} failed, continuing with the rest: ${err.message}`);
+      }
+    }
   } finally {
     await app.destroy();
   }
 
   console.log(
-    `[sync] processed ${bookings.length} booking(s): ${counts.created} created+synced, ` +
+    `[sync] new bookings (${newBookings.length}): ${counts.created} created+synced, ` +
       `${counts['created-no-ghl']} created without GHL (no email), ${counts.skipped} already synced, ` +
-      `${counts['would-create']} would-create (dry run), ${counts.failed} failed`
+      `${counts['would-create']} would-create (dry run); ` +
+      `arriving soon (${arrivingSoonBookings.length}): ${counts.backfilled} door codes backfilled, ` +
+      `${counts['backfilled-no-ghl']} backfilled without GHL (no email), ${counts['would-backfill']} would-backfill (dry run), ` +
+      `${counts['no-code-yet']} no code yet, ${counts['backfill-skipped']} already had a code or no matching booking; ` +
+      `${counts.failed} failed`
   );
   if (counts.failed > 0) process.exitCode = 1;
 }
