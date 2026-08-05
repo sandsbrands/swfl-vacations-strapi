@@ -14,6 +14,7 @@ const PLURAL_ROUTES = {
   'api::review.review': 'reviews',
   'api::property-image.property-image': 'property-images',
   'api::travel-guide.travel-guide': 'travel-guides',
+  'api::booking.booking': 'bookings',
 };
 
 // Both property and property-image have draftAndPublish enabled. The REST
@@ -26,6 +27,10 @@ const PLURAL_ROUTES = {
 // reliable way to find an entry either way. photo-sync.js explicitly
 // publishes each property-image right after finding/creating it, since
 // unlike property it has no independent editorial review step.
+// `booking` also has draftAndPublish enabled but is deliberately left out of
+// this set: unlike property, it has no editorial review step, so letting it
+// use the REST API's default (published) status means new records go live
+// immediately without an extra .publish() call.
 const DRAFT_UIDS = new Set(['api::property.property', 'api::property-image.property-image']);
 
 function requireEnv(name) {

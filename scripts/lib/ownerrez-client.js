@@ -114,10 +114,20 @@ async function listTagsForProperty(propertyId) {
   return fetchAllPages('tags', { entity_type: 'property', entity_id: propertyId });
 }
 
+async function listBookings({ since_utc, status, include_guest } = {}) {
+  return fetchAllPages('bookings', { since_utc, status, include_guest });
+}
+
+async function getGuest(guestId) {
+  return requestJson(buildUrl(`guests/${guestId}`));
+}
+
 module.exports = {
   getProperty,
   listProperties,
   getListing,
   listReviewsForProperty,
   listTagsForProperty,
+  listBookings,
+  getGuest,
 };

@@ -1,0 +1,50 @@
+name: Sync OwnerRez bookings to GHL
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: 'Dry run (log only, write/call nothing)'
+        type: boolean
+        default: false
+
+jobs:
+  sync:
+    # Same reason as sync-ownerrez.yml: OwnerRez enforces an IP allowlist
+    # that only this already-allowlisted machine satisfies.
+    runs-on: [self-hosted, owner-machine]
+    defaults:
+      run:
+        # See sync-ownerrez.yml for why this is needed (PowerShell execution
+        # policy on this runner, Git Bash not on the service's default PATH).
+        shell: bash
+    steps:
+      - name: Add Git Bash to PATH
+        shell: cmd
+        run: echo C:\Program Files\Git\bin>>%GITHUB_PATH%
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Run OwnerRez booking sync (remote)
+        env:
+          OWNERREZ_API_BASE_URL: ${{ secrets.OWNERREZ_API_BASE_URL }}
+          OWNERREZ_API_KEY: ${{ secrets.OWNERREZ_API_KEY }}
+          OWNERREZ_API_TOKEN: ${{ secrets.OWNERREZ_API_TOKEN }}
+          STRAPI_URL: ${{ secrets.STRAPI_URL }}
+          STRAPI_API_TOKEN: ${{ secrets.STRAPI_API_TOKEN }}
+          GHL_SWFL_PRIVATE_TOKEN: ${{ secrets.GHL_SWFL_PRIVATE_TOKEN }}
+        run: |
+          if [ "${{ inputs.dryRun }}" = "true" ]; then
+            node scripts/sync-ownerrez-bookings.js --remote --dry-run
+          else
+            node scripts/sync-ownerrez-bookings.js --remote
+          fi
