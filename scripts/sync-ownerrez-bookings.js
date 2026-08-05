@@ -165,6 +165,21 @@ async function syncToGhl(bookingFields, guestContact, propertyType) {
   return contact;
 }
 
+// The since_utc "new bookings" query matches anything OwnerRez reports as
+// created *or changed* recently - and a booking can get touched (a note,
+// a payment reconciliation, whatever) long after the guest has already
+// stayed and left. Without this guard, a booking like that looks
+// indistinguishable from a genuinely new one to the dedup check (it's never
+// been in Strapi before) and would wrongly get tagged str_checkin_start for
+// a guest who's already gone. Confirmed happening in production: booking
+// #18526727 (departed Jul 31) got created and tagged on 2026-08-05 - the
+// tag was manually removed from GHL afterward.
+function hasAlreadyDeparted(booking) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(booking.departure) < today;
+}
+
 async function processBooking(app, booking, { dryRun }) {
   const ownerrezBookingId = String(booking.id);
   const existing = await app.documents('api::booking.booking').findFirst({
@@ -177,9 +192,12 @@ async function processBooking(app, booking, { dryRun }) {
     fetchPropertyType(booking.property_id),
   ]);
   const bookingFields = buildBookingFields(booking, guestContact);
+  const departed = hasAlreadyDeparted(booking);
 
   if (dryRun) {
-    console.log(`[sync] (dry run) would create booking #${ownerrezBookingId}:`);
+    console.log(
+      `[sync] (dry run) would create booking #${ownerrezBookingId}${departed ? ' (already departed - GHL sync would be skipped)' : ''}:`
+    );
     console.log(
       JSON.stringify(
         {
@@ -193,10 +211,18 @@ async function processBooking(app, booking, { dryRun }) {
         2
       )
     );
-    return { status: 'would-create' };
+    return { status: departed ? 'would-create-departed' : 'would-create' };
   }
 
+  // Still mirrored into Strapi either way - this marks it seen so it's
+  // never reconsidered on a later run, and keeps the booking history
+  // complete - just never synced to GHL/tagged.
   await app.documents('api::booking.booking').create({ data: bookingFields });
+
+  if (departed) {
+    console.log(`[sync] created booking #${ownerrezBookingId} - guest already departed, GHL sync skipped`);
+    return { status: 'created-departed' };
+  }
 
   if (!bookingFields.guest_email) {
     console.warn(`[sync] booking #${ownerrezBookingId} has no guest email - Strapi record created, GHL sync skipped`);
@@ -291,8 +317,10 @@ async function main() {
   const counts = {
     created: 0,
     'created-no-ghl': 0,
+    'created-departed': 0,
     skipped: 0,
     'would-create': 0,
+    'would-create-departed': 0,
     backfilled: 0,
     'backfilled-no-ghl': 0,
     'would-backfill': 0,
@@ -325,8 +353,9 @@ async function main() {
 
   console.log(
     `[sync] new bookings (${newBookings.length}): ${counts.created} created+synced, ` +
-      `${counts['created-no-ghl']} created without GHL (no email), ${counts.skipped} already synced, ` +
-      `${counts['would-create']} would-create (dry run); ` +
+      `${counts['created-no-ghl']} created without GHL (no email), ${counts['created-departed']} created (guest already departed, GHL skipped), ` +
+      `${counts.skipped} already synced, ${counts['would-create']} would-create (dry run), ` +
+      `${counts['would-create-departed']} would-create-departed (dry run); ` +
       `arriving soon (${arrivingSoonBookings.length}): ${counts.backfilled} door codes backfilled, ` +
       `${counts['backfilled-no-ghl']} backfilled without GHL (no email), ${counts['would-backfill']} would-backfill (dry run), ` +
       `${counts['no-code-yet']} no code yet, ${counts['backfill-skipped']} already had a code or no matching booking; ` +
