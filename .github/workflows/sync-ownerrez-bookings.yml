@@ -22,24 +22,17 @@ concurrency:
 jobs:
   sync:
     # Same reason as sync-ownerrez.yml: OwnerRez enforces an IP allowlist
-    # that only this already-allowlisted machine satisfies.
-    runs-on: [self-hosted, owner-machine]
+    # that only this already-allowlisted machine (now a small always-on
+    # cloud VM, not a personal machine - see sync-ownerrez.yml) satisfies.
+    runs-on: [self-hosted, cloud-runner]
     # Bounds actual execution time once a runner picks the job up (e.g. a
     # hung npm install or a stalled API call) - separate from how long a
     # job can sit queued waiting for a runner, which GitHub caps on its own
     # regardless of this setting (that's what actually resolved the
-    # multi-hour queued failures during the outage).
+    # multi-hour queued failures during the outage that prompted moving off
+    # a personal machine in the first place).
     timeout-minutes: 20
-    defaults:
-      run:
-        # See sync-ownerrez.yml for why this is needed (PowerShell execution
-        # policy on this runner, Git Bash not on the service's default PATH).
-        shell: bash
     steps:
-      - name: Add Git Bash to PATH
-        shell: cmd
-        run: echo C:\Program Files\Git\bin>>%GITHUB_PATH%
-
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4

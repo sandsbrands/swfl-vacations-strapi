@@ -19,26 +19,10 @@ jobs:
   sync:
     # OwnerRez enforces an IP allowlist, and GitHub-hosted runners use
     # dynamic IPs that can't satisfy it - this runs on a self-hosted
-    # runner installed on the already-allowlisted machine instead.
-    runs-on: [self-hosted, owner-machine]
-    defaults:
-      run:
-        # This machine's PowerShell execution policy blocks running
-        # scripts, which is what plain `run:` steps use by default on
-        # Windows runners - Git Bash works instead. The Windows
-        # service's PATH doesn't include it (see the PATH step below),
-        # so a plain `shell: bash` alone can't resolve it; embedding
-        # bash.exe's full path directly in `shell:` also doesn't work
-        # here (GitHub Actions' path handling rejects a raw drive
-        # letter in that field: "Second path fragment must not be a
-        # drive or UNC name"). Prepending to PATH and using the plain
-        # keyword avoids both problems.
-        shell: bash
+    # runner (a small always-on cloud VM with a static IP, allowlisted
+    # with OwnerRez the same way the original machine was) instead.
+    runs-on: [self-hosted, cloud-runner]
     steps:
-      - name: Add Git Bash to PATH
-        shell: cmd
-        run: echo C:\Program Files\Git\bin>>%GITHUB_PATH%
-
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
