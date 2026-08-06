@@ -10,11 +10,26 @@ on:
         type: boolean
         default: false
 
+# If the runner goes offline for a while, GitHub mostly avoids piling up a
+# separate queued run per missed 15-minute tick on its own, but this makes
+# it explicit: only one run is ever queued/active for this workflow at a
+# time, and later triggers wait for it rather than each independently
+# timing out and reporting its own confusing failure.
+concurrency:
+  group: sync-ownerrez-bookings
+  cancel-in-progress: false
+
 jobs:
   sync:
     # Same reason as sync-ownerrez.yml: OwnerRez enforces an IP allowlist
     # that only this already-allowlisted machine satisfies.
     runs-on: [self-hosted, owner-machine]
+    # Bounds actual execution time once a runner picks the job up (e.g. a
+    # hung npm install or a stalled API call) - separate from how long a
+    # job can sit queued waiting for a runner, which GitHub caps on its own
+    # regardless of this setting (that's what actually resolved the
+    # multi-hour queued failures during the outage).
+    timeout-minutes: 20
     defaults:
       run:
         # See sync-ownerrez.yml for why this is needed (PowerShell execution
