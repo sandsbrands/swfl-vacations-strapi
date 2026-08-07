@@ -80,9 +80,12 @@ async function findContactByEmail(email) {
 }
 
 async function findContactByPhone(phone) {
+  // Confirmed live: this endpoint's query param for phone is `number`, not
+  // `phone` - the latter gets rejected with a 422 ("property phone should
+  // not exist").
   const data = await ghlRequest(
     'GET',
-    `/contacts/search/duplicate?locationId=${GHL_LOCATION_ID}&phone=${encodeURIComponent(phone)}`
+    `/contacts/search/duplicate?locationId=${GHL_LOCATION_ID}&number=${encodeURIComponent(phone)}`
   );
   return data.contact || null;
 }
