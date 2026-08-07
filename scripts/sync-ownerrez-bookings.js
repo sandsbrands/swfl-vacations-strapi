@@ -141,6 +141,18 @@ function buildBookingFields(booking, guestContact) {
   });
 }
 
+// contact.booking_channel_tag is a SINGLE_OPTIONS field with a fixed
+// picklist (confirmed live: VRBO, Expedia, Airbnb, direct, Whimstay,
+// HomestoGo, Other) - OwnerRez's listing_site casing doesn't always match
+// (e.g. "Vrbo" vs "VRBO"), so this matches case-insensitively against the
+// real options and falls back to the raw value for anything unrecognized
+// (e.g. a future channel not yet in the picklist) rather than dropping it.
+const BOOKING_CHANNEL_OPTIONS = ['VRBO', 'Expedia', 'Airbnb', 'direct', 'Whimstay', 'HomestoGo', 'Other'];
+function normalizeBookingChannel(source) {
+  if (!source) return source;
+  return BOOKING_CHANNEL_OPTIONS.find((opt) => opt.toLowerCase() === source.toLowerCase()) || source;
+}
+
 async function syncToGhl(bookingFields, guestContact, propertyType) {
   const contact = await ghl.upsertContact({
     firstName: bookingFields.guest_first_name,
@@ -152,14 +164,19 @@ async function syncToGhl(bookingFields, guestContact, propertyType) {
     state: guestContact.state,
     postalCode: guestContact.postalCode,
     country: guestContact.country,
+    // Real field keys confirmed live against the swflvacations GHL
+    // location's custom-fields list on 2026-08-07 - the previous
+    // checkin_date/checkout_date/reservation_number/booking_channel keys
+    // used here didn't match any real field and were being silently
+    // dropped by GHL's API since this script's very first version.
     customFields: [
-      { key: 'checkin_date', field_value: bookingFields.check_in },
-      { key: 'checkout_date', field_value: bookingFields.check_out },
+      { key: 'date_check_in', field_value: bookingFields.check_in },
+      { key: 'date_check_out', field_value: bookingFields.check_out },
       { key: 'property_booked', field_value: bookingFields.property_name },
       { key: 'property_type', field_value: propertyType },
       { key: 'door_code', field_value: bookingFields.lockbox_code },
-      { key: 'reservation_number', field_value: bookingFields.booking_id },
-      { key: 'booking_channel', field_value: bookingFields.booking_source },
+      { key: 'booking_id', field_value: bookingFields.booking_id },
+      { key: 'booking_channel_tag', field_value: normalizeBookingChannel(bookingFields.booking_source) },
     ].filter((f) => f.field_value !== undefined && f.field_value !== null),
   });
   return contact;
