@@ -71,4 +71,31 @@ async function addTags({ contactId, tags }) {
   return ghlRequest('POST', `/contacts/${contactId}/tags`, { tags });
 }
 
-module.exports = { upsertContact, addTags, GHL_LOCATION_ID };
+async function findContactByEmail(email) {
+  const data = await ghlRequest(
+    'GET',
+    `/contacts/search/duplicate?locationId=${GHL_LOCATION_ID}&email=${encodeURIComponent(email)}`
+  );
+  return data.contact || null;
+}
+
+async function findContactByPhone(phone) {
+  const data = await ghlRequest(
+    'GET',
+    `/contacts/search/duplicate?locationId=${GHL_LOCATION_ID}&phone=${encodeURIComponent(phone)}`
+  );
+  return data.contact || null;
+}
+
+// Direct PUT by contact id, deliberately separate from upsertContact - used
+// when the contact is already known (looked up by whichever identifier was
+// on file before) so a newly-available identifier (e.g. an email added
+// after the contact was first created by phone alone) can't cause upsert's
+// own matching logic to create a duplicate instead of updating the right
+// contact.
+async function updateContact(contactId, fields) {
+  const data = await ghlRequest('PUT', `/contacts/${contactId}`, fields);
+  return data.contact;
+}
+
+module.exports = { upsertContact, addTags, findContactByEmail, findContactByPhone, updateContact, GHL_LOCATION_ID };

@@ -276,19 +276,87 @@ async function backfillDoorCode(app, booking, { dryRun }) {
 
   await app.documents('api::booking.booking').update({ documentId: existing.documentId, data: { lockbox_code: doorCode } });
 
-  if (!existing.guest_email) {
-    console.warn(`[sync] booking #${ownerrezBookingId} backfilled in Strapi but has no guest email - GHL not updated`);
+  const contact = await findExistingGhlContact(existing);
+  if (!contact) {
+    console.warn(`[sync] booking #${ownerrezBookingId} backfilled in Strapi but has no GHL contact - GHL not updated`);
     return { status: 'backfilled-no-ghl' };
   }
 
-  await ghl.upsertContact({
-    firstName: existing.guest_first_name,
-    lastName: existing.guest_last_name,
-    email: existing.guest_email,
-    customFields: [{ key: 'door_code', field_value: doorCode }],
-  });
+  await ghl.updateContact(contact.id, { customFields: [{ key: 'door_code', field_value: doorCode }] });
   console.log(`[sync] backfilled door code for booking #${ownerrezBookingId} in Strapi + GHL`);
   return { status: 'backfilled' };
+}
+
+// Looks up the GHL contact by whichever identifier the booking record
+// already has on file (email preferred, phone as fallback) - used instead
+// of upsertContact for backfills so a newly-available identifier can't
+// cause upsert's own matching to create a duplicate contact.
+async function findExistingGhlContact(bookingRecord) {
+  if (bookingRecord.guest_email) {
+    const contact = await ghl.findContactByEmail(bookingRecord.guest_email);
+    if (contact) return contact;
+  }
+  if (bookingRecord.guest_phone) {
+    return ghl.findContactByPhone(bookingRecord.guest_phone);
+  }
+  return null;
+}
+
+// Guests sometimes add or correct their email/phone in OwnerRez after their
+// booking was already synced (e.g. a guest reachable only by phone at
+// booking time adds an email later). Re-checks bookings arriving soon
+// (same window as the door-code backfill) and fills in whichever of
+// email/phone was missing - never overwrites a value that's already set,
+// and always refreshes the standard address fields alongside it since
+// those were never persisted in Strapi to check for staleness. No addTags
+// call, so this never re-fires the check-in workflow.
+async function backfillGuestContact(app, booking, { dryRun }) {
+  const ownerrezBookingId = String(booking.id);
+  const existing = await app.documents('api::booking.booking').findFirst({
+    filters: { ownerrez_booking_id: ownerrezBookingId },
+  });
+  if (!existing) return { status: 'contact-backfill-skipped' };
+  if (existing.guest_email && existing.guest_phone) return { status: 'contact-backfill-skipped' };
+
+  const guestContact = await fetchGuestContact(booking.guest_id);
+  const newEmail = !existing.guest_email && guestContact.email ? guestContact.email : undefined;
+  const newPhone = !existing.guest_phone && guestContact.phone ? guestContact.phone : undefined;
+  if (!newEmail && !newPhone) return { status: 'contact-backfill-skipped' };
+
+  if (dryRun) {
+    console.log(
+      `[sync] (dry run) would backfill contact info for booking #${ownerrezBookingId}: ${[
+        newEmail && `email=${newEmail}`,
+        newPhone && `phone=${newPhone}`,
+      ]
+        .filter(Boolean)
+        .join(', ')}`
+    );
+    return { status: 'would-backfill-contact' };
+  }
+
+  await app.documents('api::booking.booking').update({
+    documentId: existing.documentId,
+    data: stripUndefined({ guest_email: newEmail, guest_phone: newPhone }),
+  });
+
+  const contact = await findExistingGhlContact(existing);
+  if (!contact) {
+    console.warn(`[sync] booking #${ownerrezBookingId} contact info backfilled in Strapi but no GHL contact found`);
+    return { status: 'contact-backfilled-no-ghl' };
+  }
+
+  await ghl.updateContact(contact.id, {
+    ...(newEmail ? { email: newEmail } : {}),
+    ...(newPhone ? { phone: newPhone } : {}),
+    ...(guestContact.address1 ? { address1: guestContact.address1 } : {}),
+    ...(guestContact.city ? { city: guestContact.city } : {}),
+    ...(guestContact.state ? { state: guestContact.state } : {}),
+    ...(guestContact.postalCode ? { postalCode: guestContact.postalCode } : {}),
+    ...(guestContact.country ? { country: guestContact.country } : {}),
+  });
+  console.log(`[sync] backfilled contact info for booking #${ownerrezBookingId} in Strapi + GHL`);
+  return { status: 'contact-backfilled' };
 }
 
 function isoDate(date) {
@@ -322,6 +390,7 @@ async function main() {
     from: isoDate(today),
     to: isoDate(windowEnd),
     status: 'Active',
+    include_guest: true,
     include_door_codes: true,
   });
 
@@ -343,6 +412,10 @@ async function main() {
     'would-backfill': 0,
     'no-code-yet': 0,
     'backfill-skipped': 0,
+    'contact-backfilled': 0,
+    'contact-backfilled-no-ghl': 0,
+    'would-backfill-contact': 0,
+    'contact-backfill-skipped': 0,
     failed: 0,
   };
   try {
@@ -363,6 +436,13 @@ async function main() {
         counts.failed += 1;
         console.error(`[sync] door-code backfill for booking #${booking.id} failed, continuing with the rest: ${err.message}`);
       }
+      try {
+        const { status } = await backfillGuestContact(app, booking, { dryRun: args.dryRun });
+        counts[status] += 1;
+      } catch (err) {
+        counts.failed += 1;
+        console.error(`[sync] contact-info backfill for booking #${booking.id} failed, continuing with the rest: ${err.message}`);
+      }
     }
   } finally {
     await app.destroy();
@@ -370,12 +450,14 @@ async function main() {
 
   console.log(
     `[sync] new bookings (${newBookings.length}): ${counts.created} created+synced, ` +
-      `${counts['created-no-ghl']} created without GHL (no email), ${counts['created-departed']} created (guest already departed, GHL skipped), ` +
+      `${counts['created-no-ghl']} created without GHL (no email/phone), ${counts['created-departed']} created (guest already departed, GHL skipped), ` +
       `${counts.skipped} already synced, ${counts['would-create']} would-create (dry run), ` +
       `${counts['would-create-departed']} would-create-departed (dry run); ` +
       `arriving soon (${arrivingSoonBookings.length}): ${counts.backfilled} door codes backfilled, ` +
-      `${counts['backfilled-no-ghl']} backfilled without GHL (no email), ${counts['would-backfill']} would-backfill (dry run), ` +
-      `${counts['no-code-yet']} no code yet, ${counts['backfill-skipped']} already had a code or no matching booking; ` +
+      `${counts['backfilled-no-ghl']} backfilled without GHL (no contact), ${counts['would-backfill']} would-backfill (dry run), ` +
+      `${counts['no-code-yet']} no code yet, ${counts['backfill-skipped']} already had a code or no matching booking, ` +
+      `${counts['contact-backfilled']} contact info backfilled, ${counts['contact-backfilled-no-ghl']} contact backfilled without GHL, ` +
+      `${counts['would-backfill-contact']} would-backfill-contact (dry run), ${counts['contact-backfill-skipped']} contact already complete; ` +
       `${counts.failed} failed`
   );
   if (counts.failed > 0) process.exitCode = 1;
