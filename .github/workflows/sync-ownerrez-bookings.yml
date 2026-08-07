@@ -32,6 +32,11 @@ jobs:
     # multi-hour queued failures during the outage that prompted moving off
     # a personal machine in the first place).
     timeout-minutes: 20
+    env:
+      # See sync-ownerrez.yml - the cloud runner's 512MB physical RAM makes
+      # Node set too low a default heap limit for `npm ci` to parse this
+      # repo's large Strapi lockfile, regardless of swap being available.
+      NODE_OPTIONS: --max-old-space-size=1536
     steps:
       - uses: actions/checkout@v4
 

@@ -22,6 +22,13 @@ jobs:
     # runner (a small always-on cloud VM with a static IP, allowlisted
     # with OwnerRez the same way the original machine was) instead.
     runs-on: [self-hosted, cloud-runner]
+    env:
+      # The cloud runner VM only has 512MB of physical RAM - Node sizes its
+      # default heap limit off detected physical RAM, not the swap file
+      # configured on the box, so `npm ci` (parsing this repo's large
+      # Strapi lockfile) hit that artificial ceiling and OOM-crashed despite
+      # swap being available. This raises the limit explicitly instead.
+      NODE_OPTIONS: --max-old-space-size=1536
     steps:
       - uses: actions/checkout@v4
 
