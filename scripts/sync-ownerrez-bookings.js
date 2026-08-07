@@ -241,8 +241,8 @@ async function processBooking(app, booking, { dryRun }) {
     return { status: 'created-departed' };
   }
 
-  if (!bookingFields.guest_email) {
-    console.warn(`[sync] booking #${ownerrezBookingId} has no guest email - Strapi record created, GHL sync skipped`);
+  if (!bookingFields.guest_email && !bookingFields.guest_phone) {
+    console.warn(`[sync] booking #${ownerrezBookingId} has no guest email or phone - Strapi record created, GHL sync skipped`);
     return { status: 'created-no-ghl' };
   }
 
