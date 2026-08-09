@@ -67,6 +67,18 @@
     },
     "check_out": {
       "type": "date"
+    },
+    "property": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::property.property"
+    },
+    "stay_page_token": {
+      "type": "string",
+      "unique": true
+    },
+    "stay_page_token_expires_at": {
+      "type": "datetime"
     }
   }
 }

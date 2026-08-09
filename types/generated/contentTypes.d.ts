@@ -456,6 +456,7 @@ export interface ApiAmenityAmenity extends Struct.CollectionTypeSchema {
         'other_services',
         'accessibility',
         'safety',
+        'sleeping_arrangements',
       ]
     > &
       Schema.Attribute.Required;
@@ -515,9 +516,12 @@ export interface ApiBookingBooking extends Struct.CollectionTypeSchema {
     number_of_guests: Schema.Attribute.Integer;
     number_of_nights: Schema.Attribute.Integer;
     ownerrez_booking_id: Schema.Attribute.String;
+    property: Schema.Attribute.Relation<'manyToOne', 'api::property.property'>;
     property_name: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
     qbo_project_id: Schema.Attribute.String;
+    stay_page_token: Schema.Attribute.String & Schema.Attribute.Unique;
+    stay_page_token_expires_at: Schema.Attribute.DateTime;
     stripe_payment_intent_id: Schema.Attribute.String;
     total_amount: Schema.Attribute.Integer;
     updatedAt: Schema.Attribute.DateTime;
@@ -602,6 +606,66 @@ export interface ApiExperienceExperience extends Struct.CollectionTypeSchema {
     publishedAt: Schema.Attribute.DateTime;
     slug: Schema.Attribute.String;
     stripe_product_id: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiMarketplaceVendorMarketplaceVendor
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'marketplace_vendors';
+  info: {
+    displayName: 'Marketplace Vendor';
+    pluralName: 'marketplace-vendors';
+    singularName: 'marketplace-vendor';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    active: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    campaign_end: Schema.Attribute.Date;
+    campaign_start: Schema.Attribute.Date;
+    category: Schema.Attribute.Enumeration<
+      [
+        'charter_captain',
+        'boat_rental',
+        'private_chef',
+        'watersports',
+        'pirate_ship',
+        'dining',
+        'attraction',
+        'other',
+      ]
+    >;
+    click_count: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    cta_label: Schema.Attribute.String;
+    cta_phone: Schema.Attribute.String;
+    cta_url: Schema.Attribute.String & Schema.Attribute.Required;
+    description: Schema.Attribute.Text;
+    gallery: Schema.Attribute.Media<'images', true>;
+    impression_count: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    latitude: Schema.Attribute.Decimal & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::marketplace-vendor.marketplace-vendor'
+    > &
+      Schema.Attribute.Private;
+    logo_or_photo: Schema.Attribute.Media<'images'>;
+    longitude: Schema.Attribute.Decimal & Schema.Attribute.Required;
+    max_distance_miles: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<15>;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    price_range: Schema.Attribute.String;
+    publishedAt: Schema.Attribute.DateTime;
+    tier: Schema.Attribute.Enumeration<['paid', 'organic']> &
+      Schema.Attribute.DefaultTo<'organic'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -711,6 +775,7 @@ export interface ApiPropertyProperty extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     description: Schema.Attribute.Text;
     directions: Schema.Attribute.Text;
+    emergency_contact: Schema.Attribute.String;
     featured: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     featured_image: Schema.Attribute.Media<
       'images' | 'files' | 'videos' | 'audios'
@@ -730,7 +795,10 @@ export interface ApiPropertyProperty extends Struct.CollectionTypeSchema {
     >;
     internet_info: Schema.Attribute.Text;
     is_active: Schema.Attribute.Boolean;
+    is_seasonal_rental: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
     latitude: Schema.Attribute.Decimal;
+    local_guide_notes: Schema.Attribute.Text;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -755,6 +823,7 @@ export interface ApiPropertyProperty extends Struct.CollectionTypeSchema {
     ownerrez_property_id: Schema.Attribute.String;
     ownerrez_public_url: Schema.Attribute.String;
     ownerrez_widget_property_id: Schema.Attribute.String;
+    parking_info: Schema.Attribute.Text;
     property_type: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
     qbo_project_id: Schema.Attribute.String;
@@ -766,6 +835,7 @@ export interface ApiPropertyProperty extends Struct.CollectionTypeSchema {
     state: Schema.Attribute.String;
     stripe_product_id: Schema.Attribute.String;
     summary: Schema.Attribute.Text;
+    trash_day: Schema.Attribute.String;
     unique_benefits: Schema.Attribute.Text;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -845,6 +915,7 @@ export interface ApiTravelGuideTravelGuide extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     excerpt: Schema.Attribute.Text;
     featured_image: Schema.Attribute.Media<'images'>;
+    gallery: Schema.Attribute.Media<'images', true>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -1418,6 +1489,7 @@ declare module '@strapi/strapi' {
       'api::booking.booking': ApiBookingBooking;
       'api::experience-booking.experience-booking': ApiExperienceBookingExperienceBooking;
       'api::experience.experience': ApiExperienceExperience;
+      'api::marketplace-vendor.marketplace-vendor': ApiMarketplaceVendorMarketplaceVendor;
       'api::owner.owner': ApiOwnerOwner;
       'api::property-image.property-image': ApiPropertyImagePropertyImage;
       'api::property.property': ApiPropertyProperty;
