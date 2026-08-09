@@ -1,0 +1,94 @@
+{
+  "kind": "collectionType",
+  "collectionName": "marketplace_vendors",
+  "info": {
+    "singularName": "marketplace-vendor",
+    "pluralName": "marketplace-vendors",
+    "displayName": "Marketplace Vendor"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "category": {
+      "type": "enumeration",
+      "enum": [
+        "charter_captain",
+        "boat_rental",
+        "private_chef",
+        "watersports",
+        "pirate_ship",
+        "dining",
+        "attraction",
+        "other"
+      ]
+    },
+    "description": {
+      "type": "text"
+    },
+    "logo_or_photo": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"]
+    },
+    "gallery": {
+      "type": "media",
+      "multiple": true,
+      "allowedTypes": ["images"]
+    },
+    "latitude": {
+      "type": "decimal",
+      "required": true
+    },
+    "longitude": {
+      "type": "decimal",
+      "required": true
+    },
+    "max_distance_miles": {
+      "type": "integer",
+      "required": true,
+      "default": 15
+    },
+    "tier": {
+      "type": "enumeration",
+      "enum": ["paid", "organic"],
+      "default": "organic"
+    },
+    "price_range": {
+      "type": "string"
+    },
+    "cta_label": {
+      "type": "string"
+    },
+    "cta_url": {
+      "type": "string",
+      "required": true
+    },
+    "cta_phone": {
+      "type": "string"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "campaign_start": {
+      "type": "date"
+    },
+    "campaign_end": {
+      "type": "date"
+    },
+    "impression_count": {
+      "type": "integer",
+      "default": 0
+    },
+    "click_count": {
+      "type": "integer",
+      "default": 0
+    }
+  }
+}

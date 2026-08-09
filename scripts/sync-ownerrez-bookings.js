@@ -43,10 +43,12 @@ const { compileStrapi, createStrapi } = require('@strapi/strapi');
 const ownerRez = require('./lib/ownerrez-client');
 const ghl = require('./lib/ghl-client');
 const { createRemoteApp } = require('./lib/strapi-remote-client');
+const { sign: signStayPageToken } = require('./lib/stay-page-token');
 
 const LOOKBACK_HOURS = 48;
 const ARRIVAL_WINDOW_DAYS = 14;
 const CHECKIN_TAG = 'str_checkin_start';
+const STAY_PAGE_TOKEN_VALID_DAYS_AFTER_DEPARTURE = 3;
 
 function parseArgs(argv) {
   const args = { dryRun: false, remote: false, bookingIds: [] };
@@ -112,6 +114,39 @@ function extractDoorCode(booking) {
 function nightsBetween(arrival, departure) {
   const ms = new Date(departure) - new Date(arrival);
   return Math.round(ms / (24 * 60 * 60 * 1000));
+}
+
+function stayPageTokenExpiry(departure) {
+  const expiresAt = new Date(departure);
+  expiresAt.setDate(expiresAt.getDate() + STAY_PAGE_TOKEN_VALID_DAYS_AFTER_DEPARTURE);
+  return expiresAt.toISOString();
+}
+
+// Property isn't linked on the booking response - joins on
+// ownerrez_property_id, the same OwnerRez-id mirror field sync-ownerrez.js
+// already writes onto every property record.
+async function findStrapiProperty(app, ownerrezPropertyId) {
+  if (!ownerrezPropertyId) return null;
+  return app.documents('api::property.property').findFirst({
+    filters: { ownerrez_property_id: String(ownerrezPropertyId) },
+  });
+}
+
+// Never let a missing/misconfigured STAY_PAGE_TOKEN_SECRET take down the
+// core booking/GHL sync (check-in tagging is the business-critical part of
+// this script) - stay-page token generation degrades gracefully to "not
+// backfilled yet" instead, and picks up on a later run once the secret is
+// set.
+function tryGenerateStayPageToken(ownerrezBookingId, departure) {
+  try {
+    return {
+      stay_page_token: signStayPageToken(ownerrezBookingId),
+      stay_page_token_expires_at: stayPageTokenExpiry(departure),
+    };
+  } catch (err) {
+    console.warn(`[sync] could not generate stay-page token for booking #${ownerrezBookingId}: ${err.message}`);
+    return {};
+  }
 }
 
 // booking.arrival/departure are the real stay dates. OwnerRez's own
@@ -204,11 +239,14 @@ async function processBooking(app, booking, { dryRun }) {
   });
   if (existing) return { status: 'skipped' };
 
-  const [guestContact, propertyType] = await Promise.all([
+  const [guestContact, propertyType, strapiProperty] = await Promise.all([
     fetchGuestContact(booking.guest_id),
     fetchPropertyType(booking.property_id),
+    findStrapiProperty(app, booking.property_id),
   ]);
   const bookingFields = buildBookingFields(booking, guestContact);
+  if (strapiProperty) bookingFields.property = strapiProperty.documentId;
+  Object.assign(bookingFields, tryGenerateStayPageToken(bookingFields.ownerrez_booking_id, booking.departure));
   const departed = hasAlreadyDeparted(booking);
 
   if (dryRun) {
@@ -285,6 +323,35 @@ async function backfillDoorCode(app, booking, { dryRun }) {
   await ghl.updateContact(contact.id, { customFields: [{ key: 'door_code', field_value: doorCode }] });
   console.log(`[sync] backfilled door code for booking #${ownerrezBookingId} in Strapi + GHL`);
   return { status: 'backfilled' };
+}
+
+// Covers bookings synced before the stay-page feature shipped (or before a
+// property relation could be resolved) - re-derives the token/expiry/
+// property relation from the already-fetched OwnerRez `booking` object, no
+// extra API call needed. Runs over the same arriving-soon window as the
+// door-code/contact backfills; older future-dated bookings pick this up
+// once they enter that window on a later run.
+async function backfillStayPageToken(app, booking, { dryRun }) {
+  const ownerrezBookingId = String(booking.id);
+  const existing = await app.documents('api::booking.booking').findFirst({
+    filters: { ownerrez_booking_id: ownerrezBookingId },
+  });
+  if (!existing || existing.stay_page_token) return { status: 'stay-token-backfill-skipped' };
+
+  const data = tryGenerateStayPageToken(ownerrezBookingId, booking.departure);
+  if (!data.stay_page_token) return { status: 'stay-token-backfill-skipped' };
+
+  const strapiProperty = await findStrapiProperty(app, booking.property_id);
+  if (strapiProperty) data.property = strapiProperty.documentId;
+
+  if (dryRun) {
+    console.log(`[sync] (dry run) would backfill stay-page token for booking #${ownerrezBookingId}`);
+    return { status: 'would-backfill-stay-token' };
+  }
+
+  await app.documents('api::booking.booking').update({ documentId: existing.documentId, data });
+  console.log(`[sync] backfilled stay-page token for booking #${ownerrezBookingId}`);
+  return { status: 'stay-token-backfilled' };
 }
 
 // Looks up the GHL contact by whichever identifier the booking record
@@ -416,6 +483,9 @@ async function main() {
     'contact-backfilled-no-ghl': 0,
     'would-backfill-contact': 0,
     'contact-backfill-skipped': 0,
+    'stay-token-backfilled': 0,
+    'would-backfill-stay-token': 0,
+    'stay-token-backfill-skipped': 0,
     failed: 0,
   };
   try {
@@ -443,6 +513,13 @@ async function main() {
         counts.failed += 1;
         console.error(`[sync] contact-info backfill for booking #${booking.id} failed, continuing with the rest: ${err.message}`);
       }
+      try {
+        const { status } = await backfillStayPageToken(app, booking, { dryRun: args.dryRun });
+        counts[status] += 1;
+      } catch (err) {
+        counts.failed += 1;
+        console.error(`[sync] stay-page token backfill for booking #${booking.id} failed, continuing with the rest: ${err.message}`);
+      }
     }
   } finally {
     await app.destroy();
@@ -457,7 +534,8 @@ async function main() {
       `${counts['backfilled-no-ghl']} backfilled without GHL (no contact), ${counts['would-backfill']} would-backfill (dry run), ` +
       `${counts['no-code-yet']} no code yet, ${counts['backfill-skipped']} already had a code or no matching booking, ` +
       `${counts['contact-backfilled']} contact info backfilled, ${counts['contact-backfilled-no-ghl']} contact backfilled without GHL, ` +
-      `${counts['would-backfill-contact']} would-backfill-contact (dry run), ${counts['contact-backfill-skipped']} contact already complete; ` +
+      `${counts['would-backfill-contact']} would-backfill-contact (dry run), ${counts['contact-backfill-skipped']} contact already complete, ` +
+      `${counts['stay-token-backfilled']} stay-page tokens backfilled, ${counts['would-backfill-stay-token']} would-backfill-stay-token (dry run); ` +
       `${counts.failed} failed`
   );
   if (counts.failed > 0) process.exitCode = 1;

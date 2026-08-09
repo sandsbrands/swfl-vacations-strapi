@@ -114,6 +114,18 @@
     "wifi_network": {
       "type": "string"
     },
+    "parking_info": {
+      "type": "text"
+    },
+    "trash_day": {
+      "type": "string"
+    },
+    "emergency_contact": {
+      "type": "string"
+    },
+    "local_guide_notes": {
+      "type": "text"
+    },
     "accommodations_summary": {
       "type": "text"
     },
