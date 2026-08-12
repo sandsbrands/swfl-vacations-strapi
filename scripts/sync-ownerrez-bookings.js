@@ -331,26 +331,40 @@ async function backfillDoorCode(app, booking, { dryRun }) {
 // extra API call needed. Runs over the same arriving-soon window as the
 // door-code/contact backfills; older future-dated bookings pick this up
 // once they enter that window on a later run.
+//
+// Token and property are backfilled independently (previously this bailed
+// entirely once a token existed, so any booking that got a token through
+// another path - e.g. a one-off manual regen - could never have its
+// property relation backfilled here, even though the stay page requires
+// both). `populate: ['property']` is required on the findFirst below:
+// Strapi's Document Service omits relations from the returned object by
+// default, so `existing.property` would silently read as undefined (never
+// "already set") without it.
 async function backfillStayPageToken(app, booking, { dryRun }) {
   const ownerrezBookingId = String(booking.id);
   const existing = await app.documents('api::booking.booking').findFirst({
     filters: { ownerrez_booking_id: ownerrezBookingId },
+    populate: ['property'],
   });
-  if (!existing || existing.stay_page_token) return { status: 'stay-token-backfill-skipped' };
+  if (!existing) return { status: 'stay-token-backfill-skipped' };
 
-  const data = tryGenerateStayPageToken(ownerrezBookingId, booking.departure);
-  if (!data.stay_page_token) return { status: 'stay-token-backfill-skipped' };
-
-  const strapiProperty = await findStrapiProperty(app, booking.property_id);
-  if (strapiProperty) data.property = strapiProperty.documentId;
+  const data = {};
+  if (!existing.stay_page_token) {
+    Object.assign(data, tryGenerateStayPageToken(ownerrezBookingId, booking.departure));
+  }
+  if (!existing.property) {
+    const strapiProperty = await findStrapiProperty(app, booking.property_id);
+    if (strapiProperty) data.property = strapiProperty.documentId;
+  }
+  if (Object.keys(data).length === 0) return { status: 'stay-token-backfill-skipped' };
 
   if (dryRun) {
-    console.log(`[sync] (dry run) would backfill stay-page token for booking #${ownerrezBookingId}`);
+    console.log(`[sync] (dry run) would backfill for booking #${ownerrezBookingId}: ${Object.keys(data).join(', ')}`);
     return { status: 'would-backfill-stay-token' };
   }
 
   await app.documents('api::booking.booking').update({ documentId: existing.documentId, data });
-  console.log(`[sync] backfilled stay-page token for booking #${ownerrezBookingId}`);
+  console.log(`[sync] backfilled ${Object.keys(data).join(', ')} for booking #${ownerrezBookingId}`);
   return { status: 'stay-token-backfilled' };
 }
 
