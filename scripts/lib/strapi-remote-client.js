@@ -66,7 +66,7 @@ function serializeParams(obj, prefix = '') {
   return parts.filter(Boolean).join('&');
 }
 
-async function request(method, path, { query, body } = {}) {
+async function request(method, path, { query, body, allow404 } = {}) {
   const qs = query ? serializeParams(query) : '';
   const url = `${baseUrl()}${path}${qs ? `?${qs}` : ''}`;
   const res = await fetch(url, {
@@ -78,6 +78,7 @@ async function request(method, path, { query, body } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
 
+  if (allow404 && res.status === 404) return null;
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`Strapi remote ${method} ${path} -> ${res.status} ${res.statusText}: ${text.slice(0, 500)}`);
@@ -100,6 +101,16 @@ function documents(uid) {
       if (populate) query.populate = populate;
       const json = await request('GET', collectionPath, { query });
       return json.data && json.data.length > 0 ? json.data[0] : null;
+    },
+    // Explicit status override, unlike findFirst/findMany which always
+    // default to draft for DRAFT_UIDS - needed to check whether a
+    // *published* version of a document exists, independent of its draft.
+    async findOne({ documentId, status } = {}) {
+      const query = {};
+      if (status) query.status = status;
+      else if (draft) query.status = 'draft';
+      const json = await request('GET', `${collectionPath}/${documentId}`, { query, allow404: true });
+      return json ? json.data : null;
     },
     async create({ data }) {
       const json = await request('POST', collectionPath, { query: draft ? { status: 'draft' } : undefined, body: { data } });

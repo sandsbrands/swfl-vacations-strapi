@@ -198,6 +198,20 @@ function buildSyncedFields(apiProperty, listing, tags, categoryData) {
   });
 }
 
+// --remote forces property writes to the draft version (see DRAFT_UIDS in
+// strapi-remote-client.js) so a brand-new property never auto-publishes
+// before a human reviews it. But that same forced-draft write means every
+// routine OwnerRez update to an ALREADY-live property - headline,
+// descriptions, amenities, featured_image, etc. - lands invisibly on the
+// draft forever unless something re-publishes it. This checks whether a
+// published version already exists so upsertProperty can safely
+// auto-republish routine updates while still leaving a genuinely new
+// property's first publish to a human.
+async function isAlreadyPublished(app, documentId) {
+  const published = await app.documents('api::property.property').findOne({ documentId, status: 'published' });
+  return Boolean(published);
+}
+
 function buildInitialFields(apiProperty) {
   const name = apiProperty.name || apiProperty.external_name || `OwnerRez Property ${apiProperty.id}`;
   return { name, slug: slugify(name) };
@@ -252,7 +266,9 @@ async function upsertProperty(app, bundle, { withPhotos } = {}) {
   const syncedFields = buildSyncedFields(apiProperty, listing, tags, { locationTags, structuredFields, amenityNotes });
 
   let propertyDoc;
+  let wasAlreadyPublished = false;
   if (existing) {
+    wasAlreadyPublished = await isAlreadyPublished(app, existing.documentId);
     propertyDoc = await app.documents('api::property.property').update({
       documentId: existing.documentId,
       data: { ...syncedFields, amenities: amenityDocIds },
@@ -277,6 +293,14 @@ async function upsertProperty(app, bundle, { withPhotos } = {}) {
 
   if (withPhotos) {
     await syncPhotos(app, propertyDoc, listing.photos);
+  }
+
+  // Republish AFTER photos too, so a featured_image change from syncPhotos
+  // (also a draft-only write) goes live in the same pass rather than
+  // needing yet another sync cycle to catch up.
+  if (wasAlreadyPublished) {
+    await app.documents('api::property.property').publish({ documentId: propertyDoc.documentId });
+    console.log(`[sync] republished property ${propertyDoc.documentId} (ownerrez #${ownerrezPropertyId})`);
   }
 
   return propertyDoc;
