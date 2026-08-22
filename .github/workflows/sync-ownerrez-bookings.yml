@@ -2,7 +2,14 @@ name: Sync OwnerRez bookings to GHL
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    # Hourly, 6 AM - 10 PM US Eastern only - no bookings need to be caught
+    # faster than that, and this cuts runner load ~4x vs the old */15.
+    # 10:00-02:00 UTC = 6:00 AM-10:00 PM Eastern during EDT (roughly
+    # mid-March to early November); like sync-ownerrez.yml, this has no
+    # DST awareness and drifts an hour onto 5 AM-9 PM Eastern during EST -
+    # acceptable here for the same reason. A run after 10 PM Eastern is
+    # skipped entirely; the next one picks up at 6 AM the next morning.
+    - cron: '0 10-23,0-2 * * *'
   workflow_dispatch:
     inputs:
       dryRun:
